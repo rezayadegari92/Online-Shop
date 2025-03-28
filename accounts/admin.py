@@ -1,43 +1,57 @@
+# admin.py
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import User
+from django import forms
+from .models import Account
 
-class CustomUserAdmin(UserAdmin):
-    list_display = ('email', 'first_name', 'last_name', 'user_type', 'is_staff')
-    list_filter = ('user_type', 'is_staff', 'is_active')
-    
-    fieldsets = (
-        (None, {'fields': ('email', 'password')}),
-        ('Personal info', {
-            'fields': ('first_name', 'last_name', 'user_type'),
-        }),
-        ('Permissions', {
-            'fields': ('is_staff', 'is_active', 'groups', 'user_permissions'),
-        }),
-        ('Important dates', {'fields': ('last_login', 'date_joined')}),
+class AccountCreationForm(forms.ModelForm):
+    role = forms.ChoiceField(
+        choices=Account.Role.choices,
+        initial=Account.Role.CUSTOMER,
+        help_text="Select the role for this user"
     )
-    
+
+    class Meta:
+        model = Account
+        fields = ('email', 'role')
+
+class AccountAdmin(UserAdmin):
+    add_form = AccountCreationForm
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'password1', 'password2', 'user_type', 'is_staff', 'is_active'),
+            'fields': ('email', 'password1', 'password2', 'role'),
         }),
     )
-    
-    def get_fieldsets(self, request, obj=None):
-        """Show name fields as required only for customers"""
-        fieldsets = super().get_fieldsets(request, obj)
-        if obj and obj.is_customer:
-            # Modify fieldsets to mark names as required for customers
-            fieldsets = list(fieldsets)
-            personal_info = list(fieldsets[1][1]['fields'])
-            if 'first_name' in personal_info and 'last_name' in personal_info:
-                fieldsets[1][1]['description'] = 'Required fields for customers'
-        return fieldsets
-    
-    def save_model(self, request, obj, form, change):
-        """Ensure validation is run on admin save"""
-        obj.full_clean()
-        super().save_model(request, obj, form, change)
+    fieldsets = (
+        (None, {'fields': ('email', 'password')}),
+        ('Permissions', {
+            'fields': ('role', 'is_active', 'is_staff', 'is_superuser',
+                      'groups', 'user_permissions'),
+        }),
+        ('Customer Details', {
+            'fields': ('first_name', 'last_name', 'birth_date'),
+            'classes': ('collapse',),
+        }),
+    )
+    list_display = ('email', 'role', 'is_staff', 'is_active')
+    list_filter = ('role', 'is_staff', 'is_active')
 
-admin.site.register(User, CustomUserAdmin)
+    def get_fieldsets(self, request, obj=None):
+        fieldsets = super().get_fieldsets(request, obj)
+        if not obj or obj.role != Account.Role.CUSTOMER:
+            fieldsets = [fs for fs in fieldsets if fs[0] != 'Customer Details']
+        return fieldsets
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        if obj and obj.role == Account.Role.CUSTOMER:
+            form.base_fields['first_name'].required = True
+            form.base_fields['last_name'].required = True
+            form.base_fields['birth_date'].required = True
+        return form
+
+    class Media:
+        js = ('admin/js/role_handler.js',)
+
+admin.site.register(Account, AccountAdmin)

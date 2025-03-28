@@ -1,7 +1,7 @@
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 
-class UserManager(BaseUserManager):
+class AccountManager(BaseUserManager):
     """Custom user manager for handling different user types."""
     
     def create_user(self, email, password=None, **extra_fields):
@@ -13,17 +13,18 @@ class UserManager(BaseUserManager):
         user.set_password(password)
         user.save(using=self._db)
         return user
-    def create_customer(self, email, password=None, first_name=None, last_name=None, **extra_fields):
+    def create_customer(self, email, password=None, first_name=None, last_name=None, birth_date=None,**extra_fields):
         """Special method for creating customers with required names"""
         if not all([first_name, last_name]):
             raise ValueError(_('Customers require both first_name and last_name'))
         
-        extra_fields.setdefault('user_type', User.UserType.CUSTOMER)
+        extra_fields.setdefault('role', Account.Role.CUSTOMER)
         return self.create_user(
             email=email,
             password=password,
             first_name=first_name,
             last_name=last_name,
+            birth_date=birth_date,
             **extra_fields
         )
     

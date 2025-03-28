@@ -2,12 +2,13 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
-from .managers import UserManager
+from .managers import AccountManager
 from addresses.models import Address
-class User(AbstractUser):
+
+class Account(AbstractUser):
     """Custom user model with different user types and customer-specific fields."""
     
-    class UserType(models.TextChoices):
+    class Role(models.TextChoices):
         ADMIN = 'admin', _('Admin')
         SUPERVISOR = 'supervisor', _('Supervisor')
         OPERATOR = 'operator', _('Operator')
@@ -15,12 +16,6 @@ class User(AbstractUser):
     
     username = None  # Remove username field, we'll use email instead
     email = models.EmailField(_('email address'), unique=True)
-    user_type = models.CharField(
-        _('user type'),
-        max_length=20,
-        choices=UserType.choices,
-        default=UserType.CUSTOMER
-    )
     
     # Customer-specific fields (nullable for other user types)
     first_name = models.CharField(_('first name'), max_length=150, blank=True)
@@ -32,42 +27,52 @@ class User(AbstractUser):
         blank=True,
         related_name='users'
     )
-    
+    date_joined = models.DateTimeField(auto_now_add=True)
+    is_staff = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+    role = models.CharField(_('role'), max_length=20, choices=Role.choices, default=Role.CUSTOMER)
+    addresses = models.ManyToManyField(
+        Address,
+        verbose_name=_('addresses'),
+        blank=True,
+        related_name='accounts'
+    )
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []  # For createsuperuser command
     
-    objects = UserManager()
+    objects = AccountManager()
 
-    def clean(self):
-        """Validate that customers have first and last names"""
-        super().clean()
-        if self.is_customer and (not self.first_name or not self.last_name):
-            raise ValidationError({
-                'first_name': 'First name is required for customers',
-                'last_name': 'Last name is required for customers'
-            })
     
     def __str__(self):
         return self.email
     
     @property
     def is_admin(self):
-        return self.user_type == self.UserType.ADMIN or self.is_superuser
+        return self.user_type == self.Role.ADMIN or self.is_superuser
     
     @property
     def is_supervisor(self):
-        return self.user_type == self.UserType.SUPERVISOR
+        return self.user_type == self.Role.SUPERVISOR
     
     @property
     def is_operator(self):
-        return self.user_type == self.UserType.OPERATOR
+        return self.user_type == self.Role.OPERATOR
     
     @property
     def is_customer(self):
-        return self.user_type == self.UserType.CUSTOMER
+        return self.user_type == self.Role.CUSTOMER
     
-    def save(self, *args, **kwargs):
-        """Ensure customer-specific fields are null for non-customer users"""
-        if not self.is_customer:
-            self.birth_date = None
-        super().save(*args, **kwargs)
+    @property
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}".strip()
+    
+    
+    def clean(self):
+        super().clean()
+        if self.is_customer:
+            if not self.first_name:
+                raise ValidationError({'first_name': _('First name is required for customers')})
+            if not self.last_name:
+                raise ValidationError({'last_name': _('Last name is required for customers')})
+            if not self.birth_date:
+                raise ValidationError({'birth_date': _('Birth date is required for customers')})
