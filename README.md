@@ -1,2 +1,2 @@
 # Onile-Shop
-create a online shop with Django and DRF
+create an online shop with Django and DRF
