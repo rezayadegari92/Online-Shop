@@ -1,78 +1,66 @@
 from django.db import models
-from django.utils.translation import gettext_lazy as _
-from django.contrib.auth.models import AbstractUser
-from django.core.exceptions import ValidationError
-from .managers import AccountManager
+from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
+from django.utils import timezone
+from .managers import UserManager
 from addresses.models import Address
-
-class Account(AbstractUser):
-    """Custom user model with different user types and customer-specific fields."""
-    
-    class Role(models.TextChoices):
-        ADMIN = 'admin', _('Admin')
-        SUPERVISOR = 'supervisor', _('Supervisor')
-        OPERATOR = 'operator', _('Operator')
-        CUSTOMER = 'customer', _('Customer')
-    
-    username = None  # Remove username field, we'll use email instead
-    email = models.EmailField(_('email address'), unique=True)
-    
-    # Customer-specific fields (nullable for other user types)
-    first_name = models.CharField(_('first name'), max_length=150, blank=True)
-    last_name = models.CharField(_('last name'), max_length=150, blank=True)
-    birth_date = models.DateField(_('birth date'), null=True, blank=True)
-    addresses = models.ManyToManyField(
-        Address,
-        verbose_name=_('addresses'),
-        blank=True,
-        related_name='users'
+class User(AbstractBaseUser, PermissionsMixin):
+    USER_TYPE_CHOICES = (
+        ('manager', 'Manager'),
+        ('supervisor', 'Supervisor'),
+        ('operator', 'Operator'),
+        ('customer', 'Customer'),
     )
-    date_joined = models.DateTimeField(auto_now_add=True)
-    is_staff = models.BooleanField(default=False)
+
+    username = models.CharField(max_length=150, unique=True)
+    user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES, default='customer')
+    
+    # فیلدهای مربوط به مشتریان
+    email = models.EmailField(unique=True, null=True, blank=True)
+    first_name = models.CharField(max_length=30, blank=True)
+    last_name = models.CharField(max_length=30, blank=True)
+    birth_date = models.DateField(null=True, blank=True)
+    # فرض بر این است که مدل Address در اپ address تعریف شده است.
+    address = models.ForeignKey(Address, null=True, blank=True, on_delete=models.SET_NULL)
+    
     is_active = models.BooleanField(default=True)
-    role = models.CharField(_('role'), max_length=20, choices=Role.choices, default=Role.CUSTOMER)
-    addresses = models.ManyToManyField(
-        Address,
-        verbose_name=_('addresses'),
-        blank=True,
-        related_name='accounts'
-    )
-    USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = []  # For createsuperuser command
-    
-    objects = AccountManager()
+    is_staff = models.BooleanField(default=False)  # مشخص می‌کند که کاربر به پنل ادمین دسترسی دارد یا خیر.
+    date_joined = models.DateTimeField(default=timezone.now)
 
-    
+    objects = UserManager()
+
+    USERNAME_FIELD = 'username'
+    REQUIRED_FIELDS = []  # در صورت نیاز می‌توانید فیلدهای اضافی برای ساخت سوپر یوزر اضافه کنید.
+
+    def save(self, *args, **kwargs):
+        # تنظیم is_staff برای کاربران بخش ادمین
+        if self.user_type in ['manager', 'supervisor', 'operator']:
+            self.is_staff = True
+        else:
+            self.is_staff = False
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return self.email
+        return self.username
     
-    @property
-    def is_admin(self):
-        return self.user_type == self.Role.ADMIN or self.is_superuser
-    
-    @property
-    def is_supervisor(self):
-        return self.user_type == self.Role.SUPERVISOR
-    
-    @property
-    def is_operator(self):
-        return self.user_type == self.Role.OPERATOR
-    
-    @property
-    def is_customer(self):
-        return self.user_type == self.Role.CUSTOMER
-    
-    @property
-    def full_name(self):
-        return f"{self.first_name} {self.last_name}".strip()
-    
-    
-    def clean(self):
-        super().clean()
-        if self.is_customer:
-            if not self.first_name:
-                raise ValidationError({'first_name': _('First name is required for customers')})
-            if not self.last_name:
-                raise ValidationError({'last_name': _('Last name is required for customers')})
-            if not self.birth_date:
-                raise ValidationError({'birth_date': _('Birth date is required for customers')})
+
+
+
+
+from django.db import models
+from django.utils import timezone
+from datetime import timedelta
+
+class OTP(models.Model):
+    email = models.EmailField(verbose_name="ایمیل")
+    otp_code = models.CharField(max_length=6, verbose_name="کد OTP")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="تاریخ ایجاد")
+    valid_until = models.DateTimeField(verbose_name="تاریخ اعتبار")
+
+    def save(self, *args, **kwargs):
+        # تنظیم زمان اعتبار (مثلاً ۱۰ دقیقه از زمان ایجاد)
+        if not self.valid_until:
+            self.valid_until = self.created_at + timedelta(minutes=10)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"OTP برای {self.email}"    

@@ -1,57 +1,25 @@
-# admin.py
 from django.contrib import admin
-from django.contrib.auth.admin import UserAdmin
-from django import forms
-from .models import Account
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from .models import User
+from .forms import UserCreationForm  # فرض کنید فرم را در forms.py قرار داده‌اید
 
-class AccountCreationForm(forms.ModelForm):
-    role = forms.ChoiceField(
-        choices=Account.Role.choices,
-        initial=Account.Role.CUSTOMER,
-        help_text="Select the role for this user"
+class UserAdmin(BaseUserAdmin):
+    add_form = UserCreationForm
+    list_display = ('username', 'user_type', 'is_staff', 'is_active')
+    list_filter = ('user_type', 'is_staff', 'is_active')
+    fieldsets = (
+        (None, {'fields': ('username', 'password')}),
+        ('اطلاعات شخصی', {'fields': ('email', 'first_name', 'last_name', 'birth_date', 'address')}),
+        ('دسترسی‌ها', {'fields': ('user_type', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
+        ('تاریخ‌های مهم', {'fields': ('last_login', 'date_joined')}),
     )
-
-    class Meta:
-        model = Account
-        fields = ('email', 'role')
-
-class AccountAdmin(UserAdmin):
-    add_form = AccountCreationForm
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'password1', 'password2', 'role'),
-        }),
+            'fields': ('username', 'user_type', 'password1', 'password2', 'is_staff', 'is_superuser')}
+        ),
     )
-    fieldsets = (
-        (None, {'fields': ('email', 'password')}),
-        ('Permissions', {
-            'fields': ('role', 'is_active', 'is_staff', 'is_superuser',
-                      'groups', 'user_permissions'),
-        }),
-        ('Customer Details', {
-            'fields': ('first_name', 'last_name', 'birth_date'),
-            'classes': ('collapse',),
-        }),
-    )
-    list_display = ('email', 'role', 'is_staff', 'is_active')
-    list_filter = ('role', 'is_staff', 'is_active')
+    search_fields = ('username', 'email', 'first_name', 'last_name')
+    ordering = ('username',)
 
-    def get_fieldsets(self, request, obj=None):
-        fieldsets = super().get_fieldsets(request, obj)
-        if not obj or obj.role != Account.Role.CUSTOMER:
-            fieldsets = [fs for fs in fieldsets if fs[0] != 'Customer Details']
-        return fieldsets
-
-    def get_form(self, request, obj=None, **kwargs):
-        form = super().get_form(request, obj, **kwargs)
-        if obj and obj.role == Account.Role.CUSTOMER:
-            form.base_fields['first_name'].required = True
-            form.base_fields['last_name'].required = True
-            form.base_fields['birth_date'].required = True
-        return form
-
-    class Media:
-        js = ('admin/js/role_handler.js',)
-
-admin.site.register(Account, AccountAdmin)
+admin.site.register(User, UserAdmin)

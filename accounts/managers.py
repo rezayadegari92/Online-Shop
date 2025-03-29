@@ -1,42 +1,25 @@
-from django.utils.translation import gettext_lazy as _
-from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.contrib.auth.base_user import BaseUserManager
 
-class AccountManager(BaseUserManager):
-    """Custom user manager for handling different user types."""
-    
-    def create_user(self, email, password=None, **extra_fields):
-        """Create and save a regular user with the given email and password."""
-        if not email:
-            raise ValueError(_('The Email must be set'))
-        email = self.normalize_email(email)
-        user = self.model(email=email, **extra_fields)
+class UserManager(BaseUserManager):
+    def create_user(self, username, password=None, **extra_fields):
+        if not username:
+            raise ValueError('فیلد username باید مقدار داشته باشد.')
+        user = self.model(username=username, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
         return user
-    def create_customer(self, email, password=None, first_name=None, last_name=None, birth_date=None,**extra_fields):
-        """Special method for creating customers with required names"""
-        if not all([first_name, last_name]):
-            raise ValueError(_('Customers require both first_name and last_name'))
-        
-        extra_fields.setdefault('role', Account.Role.CUSTOMER)
-        return self.create_user(
-            email=email,
-            password=password,
-            first_name=first_name,
-            last_name=last_name,
-            birth_date=birth_date,
-            **extra_fields
-        )
-    
-    def create_superuser(self, email, password, **extra_fields):
-        """Create and save a SuperUser with the given email and password."""
+
+    def create_superuser(self, username, password=None, **extra_fields):
+        # فرض بر این است که سوپر یوزر از نوع manager است.
+        extra_fields.setdefault('user_type', 'manager')
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
-        extra_fields.setdefault('is_active', True)
-        extra_fields.setdefault('user_type', 'admin')
 
-        if extra_fields.get('is_staff') is not True:
-            raise ValueError(_('Superuser must have is_staff=True.'))
-        if extra_fields.get('is_superuser') is not True:
-            raise ValueError(_('Superuser must have is_superuser=True.'))
-        return self.create_user(email, password, **extra_fields)
+        if extra_fields.get('user_type') != 'manager':
+            raise ValueError('سوپر یوزر باید از نوع manager باشد.')
+        if not extra_fields.get('is_staff'):
+            raise ValueError('سوپر یوزر باید is_staff=True داشته باشد.')
+        if not extra_fields.get('is_superuser'):
+            raise ValueError('سوپر یوزر باید is_superuser=True داشته باشد.')
+
+        return self.create_user(username, password, **extra_fields)
