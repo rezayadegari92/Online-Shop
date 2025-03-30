@@ -45,6 +45,9 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 
 
+from django.core.mail import send_mail
+import random
+
 
 from django.db import models
 from django.utils import timezone
@@ -54,13 +57,29 @@ class OTP(models.Model):
     email = models.EmailField(verbose_name="ایمیل")
     otp_code = models.CharField(max_length=6, verbose_name="کد OTP")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="تاریخ ایجاد")
-    valid_until = models.DateTimeField(verbose_name="تاریخ اعتبار")
 
-    def save(self, *args, **kwargs):
-        # تنظیم زمان اعتبار (مثلاً ۱۰ دقیقه از زمان ایجاد)
-        if not self.valid_until:
-            self.valid_until = self.created_at + timedelta(minutes=10)
-        super().save(*args, **kwargs)
-
+    class Meta :
+        unique_together = ("email", "otp_code")
+        
+    @staticmethod
+    def generate_otp():
+        return str(random.randint(100000, 999999))
+    
+    @classmethod
+    def send_otp_email(cls,email):
+        cls.objects.filter(email=email).delete()
+        otp_code = cls.generate_otp()
+        otp = cls.objects.create(email=email, otp_code= otp_code )
+        send_mail(
+            subject="Your otp code ",
+            message=f"your otp code is : {otp_code} ",
+            from_email="yadegarireza50@gmail.com",
+            recipient_list=[email],
+            fail_silently=False,
+        )
+        return otp_code
     def __str__(self):
-        return f"OTP برای {self.email}"    
+        return f"OTP for {self.email}"
+    
+    def is_expired(self):
+        return timezone.now() > self.created_at + timedelta(minutes=5)    

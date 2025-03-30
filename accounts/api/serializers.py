@@ -1,27 +1,18 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
-
+from accounts.models import OTP
 User = get_user_model()
 
 class CustomerSignupSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, validators=[validate_password])
+    username = serializers.CharField(required=True)
+    birth_date = serializers.DateField(required=True)
     
     class Meta:
         model = User
-        fields = ["email", "first_name", "last_name", "password"]
+        fields = ["email", "username","first_name", "last_name", "password","birth_date"]
 
-    def create(self, validated_data):
-        user = User.objects.create(
-            email=validated_data["email"],
-            first_name=validated_data["first_name"],
-            last_name=validated_data["last_name"],
-            username=validated_data["email"]  # از ایمیل به عنوان یوزرنیم استفاده می‌کنیم
-        )
-        user.set_password(validated_data["password"])
-        user.save()
-        return user
-    
 
 
 
@@ -35,3 +26,6 @@ class CustomerLoginSerializer(TokenObtainPairSerializer):
         return token
 
  
+class VerifyOTPSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    otp_code = serializers.CharField()
