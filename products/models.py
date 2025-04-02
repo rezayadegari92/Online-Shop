@@ -1,4 +1,6 @@
 from django.db import models
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
 class Category(models.Model):
     name = models.CharField(max_length=100)
@@ -16,6 +18,17 @@ class Product(models.Model):
     rating = models.PositiveSmallIntegerField(choices=RATING_CHOICES, default=1)
     details = models.TextField(blank=True, null=True)
     quantity = models.IntegerField(default=0)
+    discounted_price = models.DecimalField(max_digits=10, decimal_places=2,  blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        if self.discount_percent > 0:
+            discount_amount = (self.price * self.discount_percent) / 100
+            self.discounted_price = self.price - discount_amount
+        else :
+            self.discounted_price = self.price
+        super(Product, self).save(*args, **kwargs)     
+
+
     
     def __str__(self):
         return self.name

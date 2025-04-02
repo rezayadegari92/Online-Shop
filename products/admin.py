@@ -8,10 +8,10 @@ class CategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'price', 'discount_percent', 'category', 'rating', 'quantity')
+    list_display = ('id', 'name', 'price', 'discount_percent', 'discounted_price','category', 'rating', 'quantity')
     list_filter = ('category', 'rating')
     search_fields = ('name', 'details')
-    readonly_fields = ('rating',)  
+    readonly_fields = ('rating','discounted_price')  
 
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):

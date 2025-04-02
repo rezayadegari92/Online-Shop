@@ -26,6 +26,7 @@ class ProductSerializer(serializers.ModelSerializer):
     images = ProductImageSerializer(many=True, read_only=True)
     comments = CommentSerializer(many=True, read_only=True)
     category = serializers.StringRelatedField()
+    discounted_price = serializers.DecimalField(max_digits=10,decimal_places=2, read_only=True)
     
     class Meta:
         model = Product
@@ -34,6 +35,7 @@ class ProductSerializer(serializers.ModelSerializer):
             'name',
             'price',
             'discount_percent',
+            'discounted_price',
             'category',
             'rating',
             'details',
@@ -46,6 +48,7 @@ class ProductSerializer(serializers.ModelSerializer):
             'name',
             'price',
             'discount_percent',
+            'discounted_price',
             'category',
             'details',
             'quantity',
