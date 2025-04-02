@@ -16,10 +16,11 @@ class ProductImageSerializer(serializers.ModelSerializer):
         return obj.image.url    
 
 class CommentSerializer(serializers.ModelSerializer):
+    author = serializers.StringRelatedField(read_only=True)
     class Meta:
         model = Comment
         fields = ('id', 'author', 'content', 'created_at', 'product')
-        read_only_fields = ('id', 'created_at',)
+        read_only_fields = ('id', 'created_at','author',)
        
 
 class ProductSerializer(serializers.ModelSerializer):
