@@ -63,8 +63,13 @@ class ProductRatingSerializer(serializers.ModelSerializer):
         fields = ('rating',)
 
 class CategorySerializer(serializers.ModelSerializer):
+    subcategories = serializers.SerializerMethodField()
     products = ProductSerializer(many=True, read_only=True)
     
     class Meta:
         model = Category
-        fields = ('id', 'name', 'products',)
+        fields = ('id', 'name', 'products','parent','subcategories')
+
+
+    def get_subcategories(self, obj):
+        serializer = CategorySerializer(obj.subcategories.all(), many=True, context=self.context)    
