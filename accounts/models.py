@@ -3,6 +3,7 @@ from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.utils import timezone
 from .managers import UserManager
 from addresses.models import Address
+
 class User(AbstractBaseUser, PermissionsMixin):
     USER_TYPE_CHOICES = (
         ('manager', 'Manager'),
@@ -14,25 +15,24 @@ class User(AbstractBaseUser, PermissionsMixin):
     username = models.CharField(max_length=150, unique=True)
     user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES, default='customer')
     
-    # فیلدهای مربوط به مشتریان
+    
     email = models.EmailField(unique=True, null=True, blank=True)
     first_name = models.CharField(max_length=30, blank=True)
     last_name = models.CharField(max_length=30, blank=True)
     birth_date = models.DateField(null=True, blank=True)
-    # فرض بر این است که مدل Address در اپ address تعریف شده است.
     address = models.ForeignKey(Address, null=True, blank=True, on_delete=models.SET_NULL)
     
     is_active = models.BooleanField(default=True)
-    is_staff = models.BooleanField(default=False)  # مشخص می‌کند که کاربر به پنل ادمین دسترسی دارد یا خیر.
+    is_staff = models.BooleanField(default=False)  
     date_joined = models.DateTimeField(default=timezone.now)
 
     objects = UserManager()
 
     USERNAME_FIELD = 'username'
-    REQUIRED_FIELDS = []  # در صورت نیاز می‌توانید فیلدهای اضافی برای ساخت سوپر یوزر اضافه کنید.
+    REQUIRED_FIELDS = [] 
 
     def save(self, *args, **kwargs):
-        # تنظیم is_staff برای کاربران بخش ادمین
+        
         if self.user_type in ['manager', 'supervisor', 'operator']:
             self.is_staff = True
         else:
@@ -52,6 +52,8 @@ import random
 from django.db import models
 from django.utils import timezone
 from datetime import timedelta
+
+
 
 class OTP(models.Model):
     email = models.EmailField(verbose_name="ایمیل")

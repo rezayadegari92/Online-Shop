@@ -4,6 +4,7 @@ from django.utils.translation import gettext_lazy as _
 
 class Address(models.Model):
     """Address model for customers"""
+    
     street = models.CharField(max_length=255)
     city = models.CharField(max_length=100)
     state = models.CharField(max_length=100)
