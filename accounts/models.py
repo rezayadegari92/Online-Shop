@@ -52,7 +52,7 @@ import random
 from django.db import models
 from django.utils import timezone
 from datetime import timedelta
-
+from core.tasks import send_otp_email_task
 
 
 class OTP(models.Model):
@@ -72,13 +72,14 @@ class OTP(models.Model):
         cls.objects.filter(email=email).delete()
         otp_code = cls.generate_otp()
         otp = cls.objects.create(email=email, otp_code= otp_code )
-        send_mail(
-            subject="Your otp code ",
-            message=f"your otp code is : {otp_code} ",
-            from_email="yadegarireza50@gmail.com",
-            recipient_list=[email],
-            fail_silently=False,
-        )
+        # send_mail(
+        #     subject="Your otp code ",
+        #     message=f"your otp code is : {otp_code} ",
+        #     from_email="yadegarireza50@gmail.com",
+        #     recipient_list=[email],
+        #     fail_silently=False,
+        # )
+        send_otp_email_task.delay(email, otp_code)
         return otp_code
     def __str__(self):
         return f"OTP for {self.email}"
