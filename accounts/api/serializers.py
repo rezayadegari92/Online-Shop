@@ -4,6 +4,7 @@ from django.contrib.auth.password_validation import validate_password
 from accounts.models import OTP
 User = get_user_model()
 
+
 class CustomerSignupSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, validators=[validate_password])
     username = serializers.CharField(required=True)
@@ -11,7 +12,7 @@ class CustomerSignupSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ["email", "username","first_name", "last_name", "password","birth_date"]
+        fields = ["email", "username","first_name", "last_name", "password","birth_date", ]
 
 
 

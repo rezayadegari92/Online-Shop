@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.utils import timezone
 from .managers import UserManager
-from addresses.models import Address
+
 
 class User(AbstractBaseUser, PermissionsMixin):
     USER_TYPE_CHOICES = (
@@ -20,7 +20,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     first_name = models.CharField(max_length=30, blank=True)
     last_name = models.CharField(max_length=30, blank=True)
     birth_date = models.DateField(null=True, blank=True)
-    address = models.ForeignKey(Address, null=True, blank=True, on_delete=models.SET_NULL)
+    # address = models.ForeignKey(Address, null=True, blank=True, on_delete=models.SET_NULL)
     
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)  
