@@ -17,7 +17,7 @@ class OrderAdmin(admin.ModelAdmin):
 
 @admin.register(OrderItem)
 class OrderItemAdmin(admin.ModelAdmin):
-    list_display = ("order", "product", "quantity", "price")
+    list_display = ("order", "product", "quantity", "price_at_purchase")
 
 
 @admin.register(DiscountCode)

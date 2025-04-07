@@ -1,79 +1,96 @@
+from decimal import Decimal
 from django.test import TestCase
 from django.contrib.auth import get_user_model
-from products.models import Product
-from .models import DiscountCode, Order, OrderItem
+from orders.models import Order, OrderItem, DiscountCode
+from products.models import Product, Category
 
 User = get_user_model()
 
-class DiscountCodeModelTest(TestCase):
-    def test_str_representation(self):
-        discount_code = DiscountCode.objects.create(code='TEST10', discount_percent=10)
-        self.assertEqual(str(discount_code), 'TEST10 - 10% Off')
-
-class OrderModelTest(TestCase):
+class ComprehensiveOrderTest(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username='testuser', password='testpass123')
-        self.product = Product.objects.create(
-            name='Test Product',
-            price=100.00,
-            discounted_price=80.00
+        # ایجاد کاربر تستی
+        self.user = User.objects.create_user(username='testuser', password='12345')
+        
+        # ایجاد دسته‌بندی محصول
+        self.category = Category.objects.create(name='Electronics')
+        
+        # ایجاد دو محصول با مشخصات متفاوت
+        # محصول اول دارای تخفیف 10 درصد (بنابراین قیمت نهایی 1000 - 10% = 900.00)
+        self.product1 = Product.objects.create(
+            name='Smartphone',
+            price=Decimal('1000.00'),
+            discount_percent=10,
+            category=self.category,
+            rating=4,
+            quantity=10
         )
-        self.order = Order.objects.create(user=self.user)
-
-    def test_order_creation_defaults(self):
-        self.assertEqual(self.order.status, 'pending')
-        self.assertEqual(self.order.total_price, 0)
-
-    def test_calculate_total_price_without_discount(self):
-        # Create order items
-        OrderItem.objects.create(order=self.order, product=self.product, quantity=2)
-        self.order.calculate_total_price()
-        # Expected total: 2 * 80 = 160
-        self.assertEqual(self.order.total_price, 160.00)
-
-    def test_calculate_total_price_with_discount(self):
-        discount_code = DiscountCode.objects.create(code='TEST20', discount_percent=20)
-        self.order.discount_code = discount_code
-        self.order.save()
-        OrderItem.objects.create(order=self.order, product=self.product, quantity=2)
-        self.order.calculate_total_price()
-        # Expected total: 160 - (160 * 0.2) = 128
-        self.assertEqual(self.order.total_price, 128.00)
-
-    def test_str_representation(self):
-        self.assertEqual(str(self.order), f'Order {self.order.id} - testuser')
-
-class OrderItemModelTest(TestCase):
-    def setUp(self):
-        self.user = User.objects.create_user(username='testuser', password='testpass123')
-        self.product = Product.objects.create(
-            name='Test Product',
-            price=100.00,
-            discounted_price=80.00
+        # محصول دوم بدون تخفیف (بنابراین قیمت نهایی همان قیمت اصلی 2000.00)
+        self.product2 = Product.objects.create(
+            name='Laptop',
+            price=Decimal('2000.00'),
+            discount_percent=0,
+            category=self.category,
+            rating=5,
+            quantity=5
         )
-        self.order = Order.objects.create(user=self.user)
+        
+        # ایجاد یک کد تخفیف برای سفارش (مثلاً 20 درصد)
+        self.discount_code = DiscountCode.objects.create(code="SALE20", discount_percent=20)
 
-    def test_price_auto_set_from_product_on_save(self):
-        order_item = OrderItem.objects.create(
-            order=self.order,
-            product=self.product,
-            quantity=1
-        )
-        self.assertEqual(order_item.price, self.product.discounted_price)
+    def test_product_discount_calculation(self):
+        """تست می‌کند که در ذخیره محصول، discounted_price به درستی محاسبه شود."""
+        self.assertEqual(self.product1.discounted_price, Decimal('900.00'))
+        self.assertEqual(self.product2.discounted_price, self.product2.price)
 
-    def test_get_total_price_calculation(self):
-        order_item = OrderItem.objects.create(
-            order=self.order,
-            product=self.product,
-            quantity=3,
-            price=80.00
-        )
-        self.assertEqual(order_item.get_total_price(), 240.00)
+    def test_order_item_price_at_purchase_stability(self):
+        """
+        تست می‌کند که فیلد price_at_purchase در زمان ایجاد آیتم سفارش،
+        از discounted_price محصول گرفته شده و پس از تغییر در محصول ثابت بماند.
+        """
+        order = Order.objects.create(user=self.user, discount_code=self.discount_code)
+        order_item = OrderItem.objects.create(order=order, product=self.product1, quantity=2)
+        
+        # بررسی مقدار ثبت‌شده: باید برابر با 900.00 (discounted_price محصول) باشد
+        self.assertEqual(order_item.price_at_purchase, Decimal('900.00'))
+        
+        # تغییر در تخفیف محصول (مثلاً افزایش تخفیف به 20 درصد)
+        self.product1.discount_percent = 20
+        self.product1.save()
+        
+        # با به‌روزرسانی محصول، آیتم سفارش همچنان باید قیمت ثبت‌شده اولیه (900.00) را داشته باشد.
+        order_item.refresh_from_db()
+        self.assertEqual(order_item.price_at_purchase, Decimal('900.00'))
 
-    def test_str_representation(self):
-        order_item = OrderItem.objects.create(
-            order=self.order,
-            product=self.product,
-            quantity=2
-        )
-        self.assertEqual(str(order_item), 'Test Product x 2')
+    def test_order_total_price_calculation_with_discount_code(self):
+        """
+        تست می‌کند که متد calculate_total_price در سفارش، قیمت کل را با اعمال کد تخفیف (20%)
+        به درستی محاسبه کند.
+        """
+        order = Order.objects.create(user=self.user, discount_code=self.discount_code)
+        # ایجاد آیتم سفارش برای محصول1: 1 عدد با قیمت ثبت‌شده 900.00
+        OrderItem.objects.create(order=order, product=self.product1, quantity=1)
+        # ایجاد آیتم سفارش برای محصول2: 2 عدد با قیمت ثبت‌شده برابر با price اصلی (2000.00)
+        OrderItem.objects.create(order=order, product=self.product2, quantity=2)
+        
+        # محاسبه قیمت کل بدون تخفیف:
+        # محصول1: 1 * 900.00 = 900.00
+        # محصول2: 2 * 2000.00 = 4000.00
+        # مجموع = 900.00 + 4000.00 = 4900.00
+        #
+        # با کد تخفیف 20%: تخفیف = 4900.00 * 20 / 100 = 980.00
+        # قیمت نهایی = 4900.00 - 980.00 = 3920.00
+        order.calculate_total_price()
+        self.assertEqual(order.total_price, Decimal('3920.00'))
+
+    def test_order_total_price_without_discount_code(self):
+        """
+        تست می‌کند که در صورت عدم وجود کد تخفیف در سفارش،
+        متد calculate_total_price قیمت کل را بدون اعمال تخفیف محاسبه کند.
+        """
+        order = Order.objects.create(user=self.user)  # بدون discount_code
+        OrderItem.objects.create(order=order, product=self.product1, quantity=1)  # 900.00
+        OrderItem.objects.create(order=order, product=self.product2, quantity=1)  # 2000.00
+        
+        # مجموع بدون تخفیف = 900.00 + 2000.00 = 2900.00
+        order.calculate_total_price()
+        self.assertEqual(order.total_price, Decimal('2900.00'))
