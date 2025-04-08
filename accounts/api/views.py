@@ -112,13 +112,31 @@ class CustomerLogoutView(APIView):
     
 
 
-
-from rest_framework import generics, permissions
+from rest_framework.permissions import IsAuthenticated
 from .serializers import UserProfileSerializer
+from rest_framework_simplejwt.authentication import JWTAuthentication
+class ProfileAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        try:
+            user = request.user
+            addresses = Address.objects.filter(user=user)
+            serializer = UserProfileSerializer({
+                'user': user,
+                'addresses': addresses
+            })
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-class UserProfileView(generics.RetrieveUpdateAPIView):
-    serializer_class = UserProfileSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_object(self):
-        return self.request.user    
+    def patch(self, request):
+        try:
+            user = request.user
+            serializer = UserProfileSerializer(user, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
