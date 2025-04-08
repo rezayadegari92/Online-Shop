@@ -25,7 +25,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api-auth/', include('rest_framework.urls')),
     path('api/', include('accounts.api.urls'), name='accounts api' ),
-    path('api/', include('products.api.urls'), name='products api' )
+    path('api/', include('products.api.urls'), name='products api' ),
+    path("", include('accounts.urls')),
 ]
 
 if settings.DEBUG:

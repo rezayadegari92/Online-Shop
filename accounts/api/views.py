@@ -1,4 +1,4 @@
-from rest_framework import status
+from rest_framework import status, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth import get_user_model
@@ -6,17 +6,22 @@ from .serializers import CustomerSignupSerializer, CustomerLoginSerializer, Veri
 from accounts.models import OTP
 from datetime import datetime
 from django.contrib.auth import login
+from addresses.models import Address
 User = get_user_model()
 
 class CustomerSignupView(APIView):
-    # permission_classes = [AllowAny]
+    permission_classes = [permissions.AllowAny]
     def post(self, request):
         serializer = CustomerSignupSerializer(data=request.data)
         if serializer.is_valid():
             validated_data = serializer.validated_data.copy()
+            address_data = validated_data.pop('address', None)
             validated_data['birth_date'] = validated_data['birth_date'].isoformat()
             email = serializer.validated_data['email']
-            request.session['signup_data'] = validated_data
+            request.session['signup_data'] = {
+                'user_data': validated_data,
+                'address_data': address_data
+            }
             # Send OTP
             otp_code = OTP.send_otp_email(email)
             return Response({"message": "OTP sent to your email.", "email": email}, status=status.HTTP_200_OK)
@@ -26,11 +31,22 @@ class CustomerSignupView(APIView):
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 class CustomerLoginView(TokenObtainPairView):
-    serializer_class = CustomerLoginSerializer       
+    serializer_class = CustomerLoginSerializer    
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except Exception as e:
+            return Response({
+                "error": "Invalid credentials",
+                "detail": str(e)
+            }, status=status.HTTP_401_UNAUTHORIZED)
+            
+        return Response(serializer.validated_data, status=status.HTTP_200_OK)   
 
 
 class VerifyOTPView(APIView):
-    
+    permission_classes = [permissions.AllowAny]
     def post(self, request):
         # Handle OTP verification and user creation
         serializer = VerifyOTPSerializer(data=request.data)
@@ -40,10 +56,12 @@ class VerifyOTPView(APIView):
             if not signup_data:
                 return Response({"error": "Signup session expired"}, status=400)
 
+            user_data = signup_data['user_data']
+            address_data = signup_data.get('address_data')
             # Verify OTP
             try:
                 birth_date = datetime.strptime(
-                    signup_data['birth_date'], 
+                    user_data['birth_date'], 
                     "%Y-%m-%d"
                 ).date()
             except (KeyError, ValueError):
@@ -60,14 +78,17 @@ class VerifyOTPView(APIView):
 
             # Create user with stored data
             user = User.objects.create_user(
-                email=email,
-                username=signup_data.get('username'),
-                password=signup_data['password'],
-                first_name=signup_data.get('first_name'),
-                last_name=signup_data.get('last_name'),
-                birth_date=birth_date,
+                # email=email,
+                # username=signup_data.get('username'),
+                # password=signup_data['password'],
+                # first_name=signup_data.get('first_name'),
+                # last_name=signup_data.get('last_name'),
+                # birth_date=birth_date,
+                **user_data,
                 user_type='customer'
             )
+            if address_data:
+                Address.objects.create(user=user, **address_data)
             if 'signup_data' in request.session:
                 del request.session['signup_data']
             login(request, user)
@@ -88,3 +109,16 @@ class CustomerLogoutView(APIView):
             {"message": "Successfully logged out"},
             status=status.HTTP_200_OK
         )    
+    
+
+
+
+from rest_framework import generics, permissions
+from .serializers import UserProfileSerializer
+
+class UserProfileView(generics.RetrieveUpdateAPIView):
+    serializer_class = UserProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user    
