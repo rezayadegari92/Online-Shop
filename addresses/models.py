@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 User = get_user_model() 
 class Address(models.Model):
     """Address model for customers"""
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="address")
+    user = models.ForeignKey(User, on_delete=models.CASCADE,related_name="addresses")
     city = models.CharField(max_length=100)
     street = models.CharField(max_length=255)
    
