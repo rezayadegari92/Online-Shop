@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>User Profile</title>
     <style>
-        /* Maintain existing CSS styles */
         :root {
             --primary: #2c3e50;
             --secondary: #3498db;
@@ -244,39 +243,14 @@
 
         async function fetchProfileData() {
             try {
-                let token = localStorage.getItem('token');
-                if (!token) throw new Error('No authentication token found');
-
-                let response = await fetch('/api/profile/', {
+                const response = await fetch('/api/profile/', {
                     headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'X-CSRFToken': getCookie('csrftoken')
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
                     }
                 });
-
-                // Handle token expiration
-                if (response.status === 401) {
-                    const refreshSuccess = await refreshToken();
-                    if (refreshSuccess) {
-                        token = localStorage.getItem('token');
-                        response = await fetch('/api/profile/', {
-                            headers: {
-                                'Authorization': `Bearer ${token}`,
-                                'X-CSRFToken': getCookie('csrftoken')
-                            }
-                        });
-                    } else {
-                        localStorage.clear();
-                        window.location.href = '/login/';
-                        return;
-                    }
-                }
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.detail || 'Failed to fetch profile');
-                }
-
+                
+                if (!response.ok) throw new Error('Failed to fetch profile');
+                
                 const data = await response.json();
                 populateProfileForm(data);
                 renderAddresses(data.addresses);
@@ -285,41 +259,207 @@
             }
         }
 
-        async function refreshToken() {
-            try {
-                const refreshToken = localStorage.getItem('refresh_token');
-                if (!refreshToken) throw new Error('No refresh token available');
+        function populateProfileForm(data) {
+            document.getElementById('username').value = data.username;
+            document.getElementById('email').value = data.email;
+            document.getElementById('firstName').value = data.first_name || '';
+            document.getElementById('lastName').value = data.last_name || '';
+            document.getElementById('birthDate').value = data.birth_date || '';
+        }
 
-                const response = await fetch('/api/token/refresh/', {
-                    method: 'POST',
+        function renderAddresses(addresses) {
+            const container = document.getElementById('addressesList');
+            container.innerHTML = addresses.map(address => `
+                <div class="address-card">
+                    <div class="address-actions">
+                        <button class="btn btn-primary" onclick="editAddress(${address.id})">Edit</button>
+                        <button class="btn btn-danger" onclick="deleteAddress(${address.id})">Delete</button>
+                    </div>
+                    <p>${address.street}</p>
+                    <p>${address.city}, ${address.state} ${address.postal_code}</p>
+                    <p>${address.country} ${address.is_default ? '(Default)' : ''}</p>
+                </div>
+            `).join('');
+        }
+
+        async function deleteAddress(addressId) {
+            if (!confirm('Are you sure you want to delete this address?')) return;
+            
+            try {
+                // Fetch current addresses
+                const response = await fetch('/api/profile/', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+                if (!response.ok) throw new Error('Failed to fetch addresses');
+                const data = await response.json();
+                
+                // Filter out the deleted address
+                const updatedAddresses = data.addresses.filter(addr => addr.id !== addressId);
+                
+                // Send updated list
+                const csrfToken = getCookie('csrftoken');
+                const updateResponse = await fetch('/api/profile/', {
+                    method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
+                        'X-CSRFToken': csrfToken,
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
                     },
-                    body: JSON.stringify({ refresh: refreshToken })
+                    body: JSON.stringify({ addresses: updatedAddresses })
                 });
 
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.detail || 'Token refresh failed');
-                }
-
-                const tokenData = await response.json();
-                localStorage.setItem('token', tokenData.access);
-                if (tokenData.refresh) {
-                    localStorage.setItem('refresh_token', tokenData.refresh);
-                }
-                return true;
+                if (!updateResponse.ok) throw new Error('Delete failed');
+                await fetchProfileData();
+                showSuccess('Address deleted successfully');
             } catch (error) {
                 showError(error.message);
-                return false;
             }
         }
 
-        // Rest of the functions remain the same with proper CSRF and JWT handling
-        // [Maintain all other functions from previous implementation]
-        // Ensure all fetch requests include both Authorization and X-CSRFToken headers
+        // Profile Form Submit
+        document.getElementById('profileForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const csrfToken = getCookie('csrftoken');
+            
+            const profileData = {
+                username: document.getElementById('username').value,
+                email: document.getElementById('email').value,
+                first_name: document.getElementById('firstName').value,
+                last_name: document.getElementById('lastName').value,
+                birth_date: document.getElementById('birthDate').value
+            };
 
+            try {
+                const response = await fetch('/api/profile/', {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken,
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify(profileData)
+                });
+
+                if (!response.ok) throw new Error('Update failed');
+                showSuccess('Profile updated successfully');
+            } catch (error) {
+                showError(error.message);
+            }
+        });
+
+        // Address Modal Functions
+        function showAddressModal(address = null) {
+            currentEditingAddress = address?.id || null;
+            const form = document.getElementById('addressForm');
+            
+            if (address) {
+                document.getElementById('addressId').value = address.id;
+                document.getElementById('street').value = address.street;
+                document.getElementById('city').value = address.city;
+                document.getElementById('state').value = address.state;
+                document.getElementById('postalCode').value = address.postal_code;
+                document.getElementById('isDefault').checked = address.is_default;
+            } else {
+                form.reset();
+            }
+            
+            document.getElementById('addressModal').style.display = 'flex';
+        }
+
+        function hideAddressModal() {
+            document.getElementById('addressModal').style.display = 'none';
+            currentEditingAddress = null;
+        }
+
+        // Address Form Submit (Fixed)
+        document.getElementById('addressForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const csrfToken = getCookie('csrftoken');
+            
+            // Get existing addresses
+            let existingAddresses = [];
+            try {
+                const response = await fetch('/api/profile/', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+                if (!response.ok) throw new Error('Failed to fetch addresses');
+                const data = await response.json();
+                existingAddresses = data.addresses;
+            } catch (error) {
+                showError(error.message);
+                return;
+            }
+
+            // Build new address data
+            const addressData = {
+                street: document.getElementById('street').value,
+                city: document.getElementById('city').value,
+                state: document.getElementById('state').value,
+                postal_code: document.getElementById('postalCode').value,
+                country: 'Iran',
+                is_default: document.getElementById('isDefault').checked
+            };
+
+            // Merge with existing addresses
+            const updatedAddresses = [...existingAddresses];
+            if (currentEditingAddress) {
+                // Update existing address
+                const index = updatedAddresses.findIndex(a => a.id === currentEditingAddress);
+                if (index !== -1) {
+                    updatedAddresses[index] = { ...addressData, id: currentEditingAddress };
+                }
+            } else {
+                // Add new address
+                updatedAddresses.push({ ...addressData, id: null });
+            }
+
+            try {
+                const response = await fetch('/api/profile/', {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken,
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({ addresses: updatedAddresses })
+                });
+
+                if (!response.ok) throw new Error('Address update failed');
+                hideAddressModal();
+                await fetchProfileData();
+                showSuccess('Address saved successfully');
+            } catch (error) {
+                showError(error.message);
+            }
+        });
+
+        async function editAddress(addressId) {
+            try {
+                const response = await fetch('/api/profile/', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+                if (!response.ok) throw new Error('Failed to fetch addresses');
+                const data = await response.json();
+                const address = data.addresses.find(a => a.id === addressId);
+                if (address) showAddressModal(address);
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        function showSuccess(message) {
+            alert(`Success: ${message}`);
+        }
+
+        function showError(message) {
+            alert(`Error: ${message}`);
+        }
     </script>
 </body>
 </html>

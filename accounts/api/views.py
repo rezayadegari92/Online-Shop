@@ -121,11 +121,7 @@ class ProfileAPIView(APIView):
     def get(self, request):
         try:
             user = request.user
-            addresses = Address.objects.filter(user=user)
-            serializer = UserProfileSerializer({
-                'user': user,
-                'addresses': addresses
-            })
+            serializer = UserProfileSerializer(user)
             return Response(serializer.data)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)

@@ -5,7 +5,7 @@ from django.utils.html import format_html
 
 @admin.register(Address)
 class AddressAdmin(admin.ModelAdmin):
-    list_display = ('user_info', 'street', 'city', 'state', 'postal_code', 'country', 'is_default')
+    list_display = ('user_info', 'street', 'city', 'state', 'postal_code', 'country', 'phone_number','is_default')
     list_filter = ('country', 'state', 'is_default')
     search_fields = ('city', 'street', 'user__username', 'user__email')
     raw_id_fields = ('user',)  # Useful for large user databases
@@ -31,7 +31,7 @@ class AddressAdmin(admin.ModelAdmin):
         ('Address Details', {
             'fields': (
                 ('street', 'city'),
-                ('state', 'postal_code'),
+                ('state', 'postal_code', 'phone_number'),
                 'country'
             )
         }),
