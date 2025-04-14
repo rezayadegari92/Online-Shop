@@ -1,13 +1,8 @@
 from django.urls import path
-from addresses.api.views import UserAddressViewSet
-
-user_address = UserAddressViewSet.as_view({
-    'get': 'list',
-    'post': 'create',
-    'put': 'update',
-    'delete': 'destroy',
-})
+from .views import AddressListCreateView, AddressUpdateDeleteView, SetDefaultAddressView
 
 urlpatterns = [
-    path('', user_address, name='user-address'),
+    path('', AddressListCreateView.as_view(), name='address-list-create'),
+    path('<int:pk>/', AddressUpdateDeleteView.as_view(), name='address-update-delete'),
+    path('<int:pk>/set-default/', SetDefaultAddressView.as_view(), name='set-default-address'),
 ]

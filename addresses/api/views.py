@@ -3,37 +3,40 @@ from rest_framework.response import Response
 from addresses.models import Address
 from addresses.api.serializers import AddressSerializer
 
-class UserAddressViewSet(viewsets.ViewSet):
+from rest_framework import generics, permissions
+from addresses.models import Address
+
+class AddressListCreateView(generics.ListCreateAPIView):
+    serializer_class = AddressSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def list(self, request):
-        addresses = Address.objects.filter(user=request.user)
-        serializer = AddressSerializer(addresses, many=True)
-        return Response(serializer.data)
+    def get_queryset(self):
+        return Address.objects.filter(user=self.request.user)
 
-    def create(self, request):
-        serializer = AddressSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(user=request.user)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
-    def update(self, request):
+class AddressUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = AddressSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Address.objects.filter(user=self.request.user)
+    
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+
+class SetDefaultAddressView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
         try:
-            address = Address.objects.get(user=request.user, is_default=True)
+            address = Address.objects.get(pk=pk, user=request.user)
         except Address.DoesNotExist:
-            return Response({"detail": "آدرسی به عنوان پیش‌فرض ثبت نشده"}, status=404)
+            return Response({"detail": " address not found  "}, status=status.HTTP_404_NOT_FOUND)
 
-        serializer = AddressSerializer(address, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=400)
+        Address.objects.filter(user=request.user, is_default=True).update(is_default=False)
+        address.is_default = True
+        address.save()
 
-    def destroy(self, request):
-        try:
-            address = Address.objects.get(user=request.user, is_default=True)
-            address.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        except Address.DoesNotExist:
-            return Response({"detail": "آدرس پیش‌فرض پیدا نشد"}, status=404)
+        return Response({"detail": "addess choosed as default."}, status=status.HTTP_200_OK)    
