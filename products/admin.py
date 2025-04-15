@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import Category, Product, Comment, ProductImage, Brand
+from django import forms
+from .models import Category, Product, Comment, ProductImage, Brand, Rating
 
 
 class ProductImageInline(admin.TabularInline):  
@@ -7,10 +8,6 @@ class ProductImageInline(admin.TabularInline):
     model = ProductImage
     extra = 1  # Always show at least one empty field for new images
 
-class BrandInline(admin.TabularInline):
-    """ Allows uploading brand logo while adding a product """
-    model = Brand
-    extra = 1  # Always show at least one empty field for new brands
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
@@ -18,16 +15,34 @@ class CategoryAdmin(admin.ModelAdmin):
     list_display = ("name", "parent")  # Show category name and parent category
     search_fields = ("name",)  # Enable search by category name
 
-
+class ProductForm(forms.ModelForm):
+    class Meta:
+        model = Product
+        fields = '__all__'
+    
+    # This adds a "+" button next to the brand field
+    brand = forms.ModelChoiceField(
+        queryset=Brand.objects.all(),
+        required=False,
+        widget=admin.widgets.AutocompleteSelect(
+            field=Product._meta.get_field('brand'),
+            admin_site=admin.site,
+        )
+    )
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     """ Admin configuration for products """
-    list_display = ("name", "price", "discount_percent", "discounted_price", "category", "quantity")
-    list_filter = ("category", "discount_percent")  # Filtering by category and discount percentage
-    search_fields = ("name", "category__name")  # Search by product name and category name
-    inlines = [ProductImageInline, BrandInline]  # Inline for uploading product images
+    form = ProductForm  # Use the custom form for product
+    list_display = ("name", "price", "brand","discount_percent", "discounted_price", "category", "quantity", "average_rating")
+    list_filter = ("category", "discount_percent","brand")  # Filtering by category and discount percentage
+    search_fields = ("name", "category__name", "brand__name")  # Search by product name and category name
+    inlines = [ProductImageInline,]  # Inline for uploading product images
     readonly_fields = ("discounted_price",)  # Make discounted price read-only since it is auto-calculated
-
+    autocomplete_fields = ['brand'] 
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        form.base_fields['brand'].widget.can_add_related = True
+        return form
 
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):
@@ -46,5 +61,11 @@ class ProductImageAdmin(admin.ModelAdmin):
 @admin.register(Brand)
 class BrandAdmin(admin.ModelAdmin):
     """ Admin configuration for brands """
-    list_display = ("name", "logo")
+    list_display = ("name","website")
+    """ Show brand name and website """
     search_fields = ("name",)    
+
+
+@admin.register(Rating)
+class RatingAdmin(admin.ModelAdmin):
+    list_display = ['product', 'user', 'value']    
