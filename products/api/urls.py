@@ -8,5 +8,6 @@ router.register(r'comments', CommentViewSet, basename='comment')
 router.register(r'categories', CategoryViewSet, basename='category')
 
 urlpatterns = [
-    path('api/', include(router.urls)),
+    path('', include(router.urls)),
 ]
+
