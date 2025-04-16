@@ -5,6 +5,8 @@ User = get_user_model()
 class Category(models.Model):
     name = models.CharField(max_length=100)
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='subcategories') 
+
+    
     def __str__(self):
         if self.parent :
             return f"{self.parent} → {self.name}"
@@ -21,7 +23,7 @@ class Brand(models.Model):
 class Product(models.Model):
     
 
-    name = models.CharField(max_length=200)
+    name = models.CharField(max_length=200, db_index=True)
     brand = models.ForeignKey(Brand, on_delete=models.CASCADE, related_name="products", null=True, blank=True)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     discount_percent = models.IntegerField(default=0)
@@ -37,7 +39,15 @@ class Product(models.Model):
             self.discounted_price = self.price - discount_amount
         else :
             self.discounted_price = self.price
-        super(Product, self).save(*args, **kwargs)     
+        super(Product, self).save(*args, **kwargs)  
+
+    @property
+    def final_price(self):
+        if self.discount_percent:
+            return self.price - (self.price * self.discount_percent / 100 )
+        return self.price 
+
+
 
     def average_rating(self):
         ratings = self.ratings.all()
@@ -45,6 +55,10 @@ class Product(models.Model):
             avg =  sum(r.value for r in ratings) / ratings.count()
             return round(avg,1)
         return 0
+    
+    @property
+    def avg_rating(self):
+        return self.average_rating()
     
     def __str__(self):
         return self.name

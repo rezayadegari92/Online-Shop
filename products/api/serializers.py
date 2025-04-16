@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from products.models import Category, Product, Comment, ProductImage, Brand
+from products.models import Category, Product, Comment, ProductImage, Brand, Rating
 
 class Brandserializer(serializers.ModelSerializer):
     class Meta:
@@ -29,6 +29,8 @@ class CommentSerializer(serializers.ModelSerializer):
        
 
 class ProductSerializer(serializers.ModelSerializer):
+    final_price = serializers.SerializerMethodField()
+    avg_rating = serializers.SerializerMethodField()
     images = ProductImageSerializer(many=True, read_only=True)
     comments = CommentSerializer(many=True, read_only=True)
     category = serializers.StringRelatedField()
@@ -46,6 +48,8 @@ class ProductSerializer(serializers.ModelSerializer):
             'rating',
             'details',
             'quantity',
+            'final_price',
+            'avg_rating',
             'images',
             'comments',
         )
@@ -57,15 +61,21 @@ class ProductSerializer(serializers.ModelSerializer):
             'discounted_price',
             'category',
             'details',
+            'final_price',
+            'avg_rating',
             'quantity',
             'images',
             'comments',
         )
 
 class ProductRatingSerializer(serializers.ModelSerializer):
+    user = serializers.StringRelatedField(read_only=True)
+
     class Meta:
-        model = Product
-        fields = ('rating',)
+        model = Rating
+        fields = ('id', 'user', 'product', 'value')
+        read_only_fields = ('user', 'user',)
+    
 
 class CategorySerializer(serializers.ModelSerializer):
     subcategories = serializers.SerializerMethodField()
@@ -78,3 +88,9 @@ class CategorySerializer(serializers.ModelSerializer):
 
     def get_subcategories(self, obj):
         serializer = CategorySerializer(obj.subcategories.all(), many=True, context=self.context)    
+
+
+
+
+       
+
