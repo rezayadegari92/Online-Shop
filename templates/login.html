@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        form {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+        }
+
+        input {
+            display: block;
+            margin-bottom: 1rem;
+            padding: 0.7rem;
+            width: 100%;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 0.7rem;
+            border: none;
+            border-radius: 4px;
+            width: 100%;
+            cursor: pointer;
+        }
+
+        #result {
+            margin-top: 1rem;
+            color: red;
+        }
+    </style>
+</head>
+<body>
+
+    <form id="login-form">
+        <h2>Login</h2>
+        <input type="text" id="username" placeholder="Email or Username" required>
+        <input type="password" id="password" placeholder="Password" required>
+        <button type="submit">Login</button>
+        <div id="result"></div>
+    </form>
+
+    <script>
+        document.getElementById("login-form").addEventListener("submit", function(e) {
+            e.preventDefault();
+
+            const username = document.getElementById("username").value;
+            const password = document.getElementById("password").value;
+
+            fetch("/register/api/login/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ username, password })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.access) {
+                    // توکن‌ها رو در localStorage ذخیره کن (در صورت نیاز)
+                    localStorage.setItem("access_token", data.access);
+                    localStorage.setItem("refresh_token", data.refresh);
+
+                    // ریدایرکت بعد از لاگین موفق
+                    window.location.href = "/dashboard/";  // این آدرس رو بعداً تغییر بده
+                } else {
+                    document.getElementById("result").innerText = data.detail || data.error || "Login failed.";
+                }
+            })
+            .catch(error => {
+                console.error("Error:", error);
+                document.getElementById("result").innerText = "Something went wrong.";
+            });
+        });
+    </script>
+
+</body>
+</html>
