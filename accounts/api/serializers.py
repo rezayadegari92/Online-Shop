@@ -17,12 +17,13 @@ class CustomerSignupSerializer(serializers.ModelSerializer):
         model = User
         fields = ["email", "username","first_name", "last_name", "password","birth_date", "address",]
 
-
+        extra_kwargs = { 'address': {'required': False} }
 
 
 
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-
+from django.contrib.auth import authenticate
+from rest_framework_simplejwt.tokens import RefreshToken
 class CustomerLoginSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
@@ -30,14 +31,23 @@ class CustomerLoginSerializer(TokenObtainPairSerializer):
         token['email'] = user.email
         token['user_type'] = user.user_type
         return token
-
+    username = serializers.CharField()
+    password = serializers.CharField()
     def validate(self, attrs):
-        data = super().validate(attrs)
-        data.update({
-            'user_id': self.user.id,
-            'email': self.user.email,
-            'user_type': self.user.user_type
-        })
+        
+        username = attrs.get('username')
+        password = attrs.get('password')
+        user = authenticate(username=username, password=password)
+        if user is None:
+            raise serializers.ValidationError("Invalid credentials")
+        refresh = RefreshToken.for_user(user)
+        data = {
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+            'user_id': user.id,
+            'email': user.email,
+            'user_type': user.user_type,
+        }
         return data
  
 class VerifyOTPSerializer(serializers.Serializer):

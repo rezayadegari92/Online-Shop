@@ -78,12 +78,6 @@ class VerifyOTPView(APIView):
 
             # Create user with stored data
             user = User.objects.create_user(
-                # email=email,
-                # username=signup_data.get('username'),
-                # password=signup_data['password'],
-                # first_name=signup_data.get('first_name'),
-                # last_name=signup_data.get('last_name'),
-                # birth_date=birth_date,
                 **user_data,
                 user_type='customer'
             )

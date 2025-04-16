@@ -7,7 +7,7 @@ from .forms import UserCreationForm
 class AddressInline(admin.TabularInline):
     model = Address
     extra = 1
-    fields = ('street', 'city', 'state', 'postal_code', 'country', 'is_default')
+    fields = ('street', 'city', 'state', 'postal_code', "phone_number",'country', 'is_default')
     verbose_name = 'آدرس'
     verbose_name_plural = 'آدرس‌ها'
 
