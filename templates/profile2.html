@@ -174,7 +174,7 @@
         // Get CSRF token from cookies
         function refreshToken() {
             $.ajax({
-                url: '/api/token/refresh/',
+                url: '/accounts/api/token/refresh/',
                 method: 'POST',
                 success: function(data) {
                     localStorage.setItem('access_token', data.access);
@@ -215,7 +215,7 @@
         // Load profile data
         function loadProfile() {
             $.ajax({
-                url: '/api/profile/',
+                url: '/accounts/api/profile/',
                 method: 'GET',
                 success: function(data) {
                     $('#username').val(data.username);
@@ -243,7 +243,7 @@
             };
             
             $.ajax({
-                url: '/api/profile/',
+                url: '/accounts/api/profile/',
                 method: 'PATCH',
                 contentType: 'application/json',
                 data: JSON.stringify(formData),

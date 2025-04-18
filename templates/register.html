@@ -218,7 +218,7 @@
         }
       };
 
-      fetch("/register/api/signup/", {
+      fetch("/accounts/api/signup/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -255,7 +255,7 @@
 
       const otpCode = otpForm.querySelector("input[name='otp_code']").value;
 
-      fetch("/register/api/verify-otp/", {
+      fetch("/accounts/api/verify-otp/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

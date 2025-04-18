@@ -5,7 +5,7 @@ class AddressSerializer(serializers.ModelSerializer):
     # id = serializers.IntegerField(required=False)
     class Meta:
         model = Address
-        fields = ["id","state","city","street","postal_code","phone_number","is_default",]
+        fields = ["id","state","city","street","postal_code","phone_number","is_default","country"]
         extra_kwargs = {
             'country': {'required': False, 'default': 'Iran'},
             'user': {'read_only': True}

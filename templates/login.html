@@ -2,92 +2,181 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Login</title>
+    <title>Login - JWT Authentication</title>
     <style>
+        :root {
+            --primary-color: #3498db;
+            --success-color: #2ecc71;
+            --error-color: #e74c3c;
+        }
+
         body {
-            font-family: sans-serif;
-            background-color: #f4f4f4;
+            font-family: 'Segoe UI', sans-serif;
+            background: #f8f9fa;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
+            margin: 0;
         }
 
-        form {
-            background-color: white;
-            padding: 2rem;
-            border-radius: 8px;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+        .login-container {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            transition: transform 0.2s;
+        }
+
+        h2 {
+            color: var(--primary-color);
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
         }
 
         input {
-            display: block;
-            margin-bottom: 1rem;
-            padding: 0.7rem;
             width: 100%;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
         }
 
         button {
-            background-color: #4CAF50;
+            background: var(--primary-color);
             color: white;
-            padding: 0.7rem;
+            padding: 14px;
             border: none;
-            border-radius: 4px;
+            border-radius: 6px;
             width: 100%;
+            font-size: 16px;
+            font-weight: 600;
             cursor: pointer;
+            transition: background 0.3s;
         }
 
-        #result {
-            margin-top: 1rem;
-            color: red;
+        button:hover {
+            background: #2980b9;
+        }
+
+        .alert {
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 1.5rem;
+            display: none;
+        }
+
+        .alert-success {
+            background: #e8f6e8;
+            color: var(--success-color);
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #fceae9;
+            color: var(--error-color);
+            border: 1px solid #f5c6cb;
         }
     </style>
 </head>
 <body>
+    <div class="login-container">
+        <h2>Account Login</h2>
+        <form id="login-form">
+            <div class="form-group">
+                <input 
+                    type="text" 
+                    id="username" 
+                    placeholder="Username or Email" 
+                    required
+                    autocomplete="off"
+                >
+            </div>
+            
+            <div class="form-group">
+                <input 
+                    type="password" 
+                    id="password" 
+                    placeholder="Password" 
+                    required
+                    autocomplete="off"
+                >
+            </div>
 
-    <form id="login-form">
-        <h2>Login</h2>
-        <input type="text" id="username" placeholder="Email or Username" required>
-        <input type="password" id="password" placeholder="Password" required>
-        <button type="submit">Login</button>
-        <div id="result"></div>
-    </form>
+            <button type="submit">Sign In</button>
+        </form>
+
+        <div id="alert" class="alert"></div>
+    </div>
 
     <script>
-        document.getElementById("login-form").addEventListener("submit", function(e) {
+        // CSRF Token handling
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        // Form submission handler
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
+            
+            const alert = document.getElementById('alert');
+            alert.style.display = 'none';
 
-            const username = document.getElementById("username").value;
-            const password = document.getElementById("password").value;
+            const formData = {
+                username: document.getElementById('username').value,
+                password: document.getElementById('password').value
+            };
 
-            fetch("/register/api/login/", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ username, password })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.access) {
-                    // توکن‌ها رو در localStorage ذخیره کن (در صورت نیاز)
-                    localStorage.setItem("access_token", data.access);
-                    localStorage.setItem("refresh_token", data.refresh);
+            try {
+                const response = await fetch('/accounts/api/token/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
 
-                    // ریدایرکت بعد از لاگین موفق
-                    window.location.href = "/dashboard/";  // این آدرس رو بعداً تغییر بده
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Store tokens
+                    localStorage.setItem('access_token', data.access);
+                    localStorage.setItem('refresh_token', data.refresh);
+                    
+                    // Show success feedback
+                    alert.className = 'alert alert-success';
+                    alert.textContent = 'Login successful! Redirecting...';
+                    alert.style.display = 'block';
+                    
+                    // Redirect to dashboard
+                    setTimeout(() => {
+                        window.location.href = '/profile/';
+                    }, 1500);
                 } else {
-                    document.getElementById("result").innerText = data.detail || data.error || "Login failed.";
+                    throw new Error(data.detail || 'Invalid credentials');
                 }
-            })
-            .catch(error => {
-                console.error("Error:", error);
-                document.getElementById("result").innerText = "Something went wrong.";
-            });
+            } catch (error) {
+                alert.className = 'alert alert-error';
+                alert.textContent = error.message || 'Login failed. Please try again.';
+                alert.style.display = 'block';
+                console.error('Login Error:', error);
+            }
         });
     </script>
-
 </body>
 </html>

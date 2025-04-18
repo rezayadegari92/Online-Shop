@@ -80,6 +80,7 @@ class VerifyOTPView(APIView):
             user = User.objects.create_user(
                 **user_data,
                 user_type='customer'
+                
             )
             if address_data:
                 Address.objects.create(user=user, **address_data)
@@ -109,8 +110,11 @@ class CustomerLogoutView(APIView):
 from rest_framework.permissions import IsAuthenticated
 from .serializers import UserProfileSerializer
 from rest_framework_simplejwt.authentication import JWTAuthentication
-class ProfileAPIView(APIView):
+
+
+class ProfileAPIView(APIView, JWTAuthentication):
     permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
     
     def get(self, request):
         try:
