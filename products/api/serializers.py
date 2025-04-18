@@ -4,7 +4,7 @@ from products.models import Category, Product, Comment, ProductImage, Brand, Rat
 class Brandserializer(serializers.ModelSerializer):
     class Meta:
         model = Brand
-        fields = ...
+        fields = ['id', 'name', 'website'] 
 
 class ProductImageSerializer(serializers.ModelSerializer):
 
@@ -30,7 +30,13 @@ class CommentSerializer(serializers.ModelSerializer):
 
 class ProductSerializer(serializers.ModelSerializer):
     final_price = serializers.SerializerMethodField()
-    avg_rating = serializers.SerializerMethodField()
+    #avg_rating = serializers.SerializerMethodField()
+    avg_rating = serializers.DecimalField(
+        source='avg_rating',
+        max_digits=3,
+        decimal_places=1,
+        read_only=True
+    )
     images = ProductImageSerializer(many=True, read_only=True)
     comments = CommentSerializer(many=True, read_only=True)
     category = serializers.StringRelatedField()
@@ -45,7 +51,6 @@ class ProductSerializer(serializers.ModelSerializer):
             'discount_percent',
             'discounted_price',
             'category',
-            'rating',
             'details',
             'quantity',
             'final_price',
@@ -81,13 +86,15 @@ class CategorySerializer(serializers.ModelSerializer):
     subcategories = serializers.SerializerMethodField()
     products = ProductSerializer(many=True, read_only=True)
     
+    
     class Meta:
         model = Category
         fields = ('id', 'name', 'products','parent','subcategories')
 
 
     def get_subcategories(self, obj):
-        serializer = CategorySerializer(obj.subcategories.all(), many=True, context=self.context)    
+        serializer = CategorySerializer(obj.subcategories.all(), many=True, context=self.context) 
+        return serializer.data   
 
 
 

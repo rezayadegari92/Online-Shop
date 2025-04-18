@@ -11,19 +11,23 @@ from .serializers import (
     CategorySerializer
 )
 
-
+from django.db.models import Avg
 
 class ProductViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Product.objects.all()
+    queryset = Product.objects.annotate(
+        avg_rating=Avg('ratings__value')
+    )
+    #queryset = Product.objects.all()
     serializer_class = ProductSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
     filterset_fields = ['category', 'brand']
     search_fields = ['name', 'category__name', 'brand__name']
-    ordering_fields = ['price', 'rating']
-    ordering = ['-rating']
+    ordering_fields = ['price', 'avg_rating']
+    ordering = ['-avg_rating']
     
     @action(detail=True, methods=['get'])
     def popular(self, request, pk=None):
+        
         sorted_products = sorted(
             self.get_queryset(),
             key=lambda x: x.avg_rating,
@@ -70,4 +74,3 @@ class RatingViewSet(viewsets.ModelViewSet):
             defaults={'value': serializer.validated_data['value']}
         )
         serializer.instance = rating
-           
