@@ -25,31 +25,33 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 
-class CustomerLoginSerializer(TokenObtainPairSerializer):
-    @classmethod
-    def get_token(cls, user):
-        token = super().get_token(user)
-        token['email'] = user.email
-        token['user_type'] = user.user_type
-        return token
-    username = serializers.CharField()
-    password = serializers.CharField()
-    def validate(self, attrs):
+class LoginSerializer(serializers.Serializer):
+    email_or_username = serializers.CharField()
+    password = serializers.CharField(write_only=True)
+
+    def validate(self, data):
+        email_or_username = data.get('email_or_username')
+        password = data.get('password')
+
         
-        username = attrs.get('username')
-        password = attrs.get('password')
-        user = authenticate(username=username, password=password)
-        if user is None:
+        if '@' in email_or_username:
+            user = User.objects.filter(email=email_or_username).first()
+        else:
+            user = User.objects.filter(username=email_or_username).first()
+
+        if not user:
+            raise serializers.ValidationError("User not found")
+
+        if not user.check_password(password):
             raise serializers.ValidationError("Invalid credentials")
-        refresh = RefreshToken.for_user(user)
-        data = {
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
-            'user_id': user.id,
-            'email': user.email,
-            'user_type': user.user_type,
-        }
+
+        if not user.is_active:
+            raise serializers.ValidationError("User account is disabled")
+
+        # لاگین موفق
+        data['user'] = user
         return data
+
  
 class VerifyOTPSerializer(serializers.Serializer):
     email = serializers.EmailField()

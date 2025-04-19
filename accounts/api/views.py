@@ -2,10 +2,14 @@ from rest_framework import status, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth import get_user_model
-from .serializers import CustomerSignupSerializer, CustomerLoginSerializer, VerifyOTPSerializer
+from .serializers import CustomerSignupSerializer, LoginSerializer, VerifyOTPSerializer
 from accounts.models import OTP
 from datetime import datetime
-from django.contrib.auth import login
+# from django.contrib.auth import login
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework_simplejwt.tokens import RefreshToken
+
+
 from addresses.models import Address
 User = get_user_model()
 
@@ -30,19 +34,26 @@ class CustomerSignupView(APIView):
 
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-class CustomerLoginView(TokenObtainPairView):
-    serializer_class = CustomerLoginSerializer    
-    def post(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        try:
-            serializer.is_valid(raise_exception=True)
-        except Exception as e:
+class LoginView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = LoginSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.validated_data['user']
+
+            refresh = RefreshToken.for_user(user)
+
             return Response({
-                "error": "Invalid credentials",
-                "detail": str(e)
-            }, status=status.HTTP_401_UNAUTHORIZED)
-            
-        return Response(serializer.validated_data, status=status.HTTP_200_OK)   
+                "message": "Login successful",
+                "user_id": user.id,
+                "email": user.email,
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+                "user_type": user.user_type,
+            }, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_401_UNAUTHORIZED)
 
 
 class VerifyOTPView(APIView):
@@ -86,10 +97,15 @@ class VerifyOTPView(APIView):
                 Address.objects.create(user=user, **address_data)
             if 'signup_data' in request.session:
                 del request.session['signup_data']
-            login(request, user)
+            # login(request, user)
+            refresh = RefreshToken.for_user(user)
             return Response({
                 "message": "Registration successful",
-                "user_id": user.id
+                "user_id": user.id,
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+                "email": user.email,
+                "user_type": user.user_type,
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=400)
     
@@ -98,22 +114,23 @@ class VerifyOTPView(APIView):
 
 from django.contrib.auth import logout
 class CustomerLogoutView(APIView):
-    def post(self, request):
-        logout(request)
-        return Response(
-            {"message": "Successfully logged out"},
-            status=status.HTTP_200_OK
-        )    
-    
+    permission_classes = [permissions.IsAuthenticated]
 
+    def post(self, request):
+        try:
+            refresh_token = request.data["refresh"]
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+            return Response({"message": "Logout successful"}, status=status.HTTP_205_RESET_CONTENT)
+        except Exception as e:
+            return Response({"error": "Invalid refresh token"}, status=status.HTTP_400_BAD_REQUEST)
 
 from rest_framework.permissions import IsAuthenticated
 from .serializers import UserProfileSerializer
-from rest_framework_simplejwt.authentication import JWTAuthentication
 
 
-class ProfileAPIView(APIView, JWTAuthentication):
-    permission_classes = [IsAuthenticated]
+class ProfileAPIView(APIView):
+    # permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
     
     def get(self, request):
