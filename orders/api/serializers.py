@@ -1,37 +1,61 @@
+# cart/api/v1/serializers.py
 from rest_framework import serializers
-from orders.models import Order, OrderItem, DiscountCode
+from orders.models import CartItem
 from products.models import Product
 
+class CartItemSerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(source='product.name', read_only=True)
+    product_price = serializers.DecimalField(source='product.discounted_price', max_digits=10, decimal_places=2, read_only=True)
+    
+    class Meta:
+        model = CartItem
+        fields = ['id', 'product', 'product_name', 'product_price', 'quantity']
 
-class OrderItemSerializer(serializers.ModelSerializer):
-    """ Serializer for items in an order """
-    product_name = serializers.ReadOnlyField(source='product.name')
+class CartItemCreateSerializer(serializers.ModelSerializer):
+    product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all())
 
     class Meta:
-        model = OrderItem
-        fields = ["id", "product", "product_name", "quantity", "price"]
+        model = CartItem
+        fields = ['product', 'quantity']
 
+# cart/api/v1/serializers.py (ادامه فایل قبلی)
 
-class OrderSerializer(serializers.ModelSerializer):
-    """ Serializer for orders, including order items """
-    items = OrderItemSerializer(many=True, read_only=True)
-    total_price = serializers.ReadOnlyField()
+from cart.models import Cart, DiscountCode
+from decimal import Decimal
+
+class CartSerializer(serializers.ModelSerializer):
+    items = CartItemSerializer(many=True, read_only=True)
+    total_price = serializers.SerializerMethodField()
+    discount_percent = serializers.SerializerMethodField()
+    final_price = serializers.SerializerMethodField()
 
     class Meta:
-        model = Order
-        fields = ["id", "user", "status", "discount_code", "total_price", "items", "created_at"]
-        read_only_fields = ["user", "total_price", "created_at"]
+        model = Cart
+        fields = ['id', 'items', 'discount_code', 'discount_percent', 'total_price', 'final_price']
 
-    def create(self, validated_data):
-        """ Assign the order to the current user """
-        request = self.context.get("request")
-        user = request.user if request else None
-        validated_data["user"] = user
-        return super().create(validated_data)
+    def get_total_price(self, obj):
+        return sum((item.get_total_price() for item in obj.items.all()), Decimal(0))
+
+    def get_discount_percent(self, obj):
+        if obj.discount_code:
+            return obj.discount_code.discount_percent
+        return 0
+
+    def get_final_price(self, obj):
+        total = self.get_total_price(obj)
+        if obj.discount_code:
+            discount_amount = (total * obj.discount_code.discount_percent) / 100
+            return total - discount_amount
+        return total
 
 
-class DiscountCodeSerializer(serializers.ModelSerializer):
-    """ Serializer for discount codes """
-    class Meta:
-        model = DiscountCode
-        fields = ["id", "code", "discount_percent"]
+# cart/api/v1/serializers.py (ادامه)
+
+class ApplyDiscountSerializer(serializers.Serializer):
+    code = serializers.CharField()
+
+    def validate_code(self, value):
+        try:
+            return DiscountCode.objects.get(code=value)
+        except DiscountCode.DoesNotExist:
+            raise serializers.ValidationError("کد تخفیف نامعتبر است.")

@@ -112,7 +112,6 @@ class VerifyOTPView(APIView):
 
 
 
-from django.contrib.auth import logout
 class CustomerLogoutView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
