@@ -56,9 +56,7 @@ class Product(models.Model):
             return round(avg,1)
         return 0
     
-    @property
-    def avg_rating(self):
-        return self.average_rating()
+    
     
     def __str__(self):
         return self.name

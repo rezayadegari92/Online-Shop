@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from products.models import Category, Product, Comment, ProductImage, Brand, Rating
-
+from decimal import Decimal, ROUND_HALF_UP
 class Brandserializer(serializers.ModelSerializer):
     class Meta:
         model = Brand
@@ -29,17 +29,12 @@ class CommentSerializer(serializers.ModelSerializer):
        
 
 class ProductSerializer(serializers.ModelSerializer):
-    final_price = serializers.SerializerMethodField()
+    final_price = serializers.SerializerMethodField(read_only=True)
     #avg_rating = serializers.SerializerMethodField()
-    avg_rating = serializers.DecimalField(
-        source='avg_rating',
-        max_digits=3,
-        decimal_places=1,
-        read_only=True
-    )
+    avg_rating = serializers.SerializerMethodField(read_only=True)
     images = ProductImageSerializer(many=True, read_only=True)
     comments = CommentSerializer(many=True, read_only=True)
-    category = serializers.StringRelatedField()
+    category = serializers.StringRelatedField(read_only=True)
     discounted_price = serializers.DecimalField(max_digits=10,decimal_places=2, read_only=True)
     
     class Meta:
@@ -72,6 +67,14 @@ class ProductSerializer(serializers.ModelSerializer):
             'images',
             'comments',
         )
+    
+    def get_avg_rating(self, obj):
+        value = obj.avg_rating if hasattr(obj, 'avg_rating') and obj.avg_rating is not None else obj.average_rating()
+        if value is not None:
+            return Decimal(str(value)).quantize(Decimal('0.1'), rounding=ROUND_HALF_UP)
+        return None
+    def get_final_price(self, obj):
+        return obj.final_price
 
 class ProductRatingSerializer(serializers.ModelSerializer):
     user = serializers.StringRelatedField(read_only=True)

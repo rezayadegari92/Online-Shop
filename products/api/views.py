@@ -14,6 +14,7 @@ from .serializers import (
 from django.db.models import Avg
 
 class ProductViewSet(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [permissions.AllowAny]
     queryset = Product.objects.annotate(
         avg_rating=Avg('ratings__value')
     )
@@ -28,16 +29,13 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=['get'])
     def popular(self, request, pk=None):
         
-        sorted_products = sorted(
-            self.get_queryset(),
-            key=lambda x: x.avg_rating,
-            reverse=True
-        )
-        page = self.paginate_queryset(sorted_products)
+        queryset = self.get_queryset().order_by('-avg_rating')
+
+        page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
-        serializer = self.get_serializer(sorted_products, many=True)
+        serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
     
 
@@ -55,6 +53,7 @@ class CommentViewSet(viewsets.ModelViewSet):
         return super().create(request, *args, **kwargs)
 
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [permissions.AllowAny]
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
 
