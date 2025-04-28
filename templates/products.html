@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Online Shop Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: #f8f9fa; }
+    .section { display: none; padding-top: 20px; }
+    .active-section { display: block; }
+    .card-img { max-width: 80px; margin-right: 15px; }
+    .cart-item { padding: 10px; background: #fff; border-radius: 6px; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand bg-light">
+  <ul class="nav nav-pills">
+    <li class="nav-item"><a class="nav-link active" data-target="products-sec" href="#">Products</a></li>
+    <li class="nav-item"><a class="nav-link" data-target="categories-sec" href="#">Categories</a></li>
+    <li class="nav-item"><a class="nav-link" data-target="brands-sec" href="#">Brands</a></li>
+    <li class="nav-item"><a class="nav-link" data-target="toprated-sec" href="#">Top Rated</a></li>
+    <li class="nav-item"><a class="nav-link" data-target="cart-sec" href="#">Cart</a></li>
+  </ul>
+</nav>
+
+<div class="container">
+
+  <!-- Products Section -->
+  <div id="products-sec" class="section active-section">
+    <h3>All Products</h3>
+    <div class="input-group mb-3 w-50">
+      <input id="prod-search" class="form-control" placeholder="Search name, brand, category">
+      <button id="prod-search-btn" class="btn btn-outline-secondary">Search</button>
+    </div>
+    <p id="prod-price-range" class="text-muted"></p>
+    <div id="prod-list"></div>
+    <nav><ul class="pagination" id="prod-pg"></ul></nav>
+  </div>
+
+  <!-- Categories Section -->
+  <div id="categories-sec" class="section">
+    <h3>Categories</h3>
+    <ul id="cat-list" class="list-group w-50 mb-3"></ul>
+    <h5 id="cat-title"></h5>
+    <div id="cat-prods"></div>
+    <nav><ul class="pagination" id="cat-pg"></ul></nav>
+  </div>
+
+  <!-- Brands Section -->
+  <div id="brands-sec" class="section">
+    <h3>Brands</h3>
+    <ul id="brand-list" class="list-group w-50 mb-3"></ul>
+    <h5 id="brand-title"></h5>
+    <div id="brand-prods"></div>
+    <nav><ul class="pagination" id="brand-pg"></ul></nav>
+  </div>
+
+  <!-- Top Rated Section -->
+  <div id="toprated-sec" class="section">
+    <h3>Top Rated Products</h3>
+    <div id="top-list"></div>
+    <nav><ul class="pagination" id="top-pg"></ul></nav>
+  </div>
+
+  <!-- Cart Section -->
+  <div id="cart-sec" class="section">
+    <h3>Your Cart</h3>
+    <div class="input-group mb-3 w-50">
+      <input id="discount-code" class="form-control" placeholder="Discount code">
+      <button id="apply-discount" class="btn btn-outline-primary">Apply</button>
+    </div>
+    <div id="cart-items"></div>
+    <div class="d-flex justify-content-between align-items-center mt-3">
+      <h4>Total: $<span id="cart-total">0.00</span></h4>
+      <button id="checkout-btn" class="btn btn-success">Checkout</button>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script>
+const token      = localStorage.getItem('access_token');
+const pageSize   = 10;
+
+// NAVIGATION
+$('.nav-link').click(function(e){
+  e.preventDefault();
+  $('.nav-link').removeClass('active');
+  $(this).addClass('active');
+  $('.section').removeClass('active-section');
+  $('#' + $(this).data('target')).addClass('active-section');
+});
+
+// GENERIC PAGINATION HANDLER
+function attachPagination(pagerId, loadFn){
+  $(pagerId).off('click').on('click','.page-link',function(e){
+    e.preventDefault();
+    const txt = $(this).text(),
+          href = $(this).data('href');
+    loadFn(href || null, txt);
+  });
+}
+
+// PRODUCTS
+let prodLast = null;
+function loadProducts(url, pageText){
+  let api = '/api/products/';
+  const q = $('#prod-search').val().trim();
+  if (pageText==='Prev' && prodLast.previous) url = prodLast.previous;
+  if (pageText==='Next' && prodLast.next) url = prodLast.next;
+  if (!url) {
+    url = api + (q? '?search='+encodeURIComponent(q) : '');
+  }
+  $.ajax({ url, headers:{'Authorization':'Bearer '+token},
+    success: data => {
+      prodLast = data;
+      // price range
+      if (data.results.length){
+        const r = data.results[0].price_range;
+        $('#prod-price-range').text(`Price Range: $${r.min}–${r.max}`);
+      }
+      // list
+      $('#prod-list').empty();
+      data.results.forEach(p=>{
+        $('#prod-list').append(`
+          <div class="d-flex card mb-2 p-2">
+            <img src="${p.images[0]?.image_url||''}" class="card-img" alt="">
+            <div>
+              <h5>${p.name}</h5>
+              <p>Price: $${p.final_price} | Discount: ${p.discount_percent}% | Rating: ${p.avg_rating}</p>
+              <p>Category: ${p.category}</p>
+            </div>
+          </div>
+        `);
+      });
+      // pagination
+      const pg = $('#prod-pg').empty(),
+            tot = Math.ceil(data.count/pageSize);
+      if (data.previous) pg.append(`<li class="page-item"><a class="page-link" data-href="${data.previous}" href="#">Prev</a></li>`);
+      for(let i=1;i<=tot;i++){
+        const href = api+'?page='+i+(q? '&search='+encodeURIComponent(q):'');
+        pg.append(`<li class="page-item${i===getPage(prodLast)?' active':''}">
+          <a class="page-link" data-href="${href}" href="#">${i}</a></li>`);
+      }
+      if (data.next) pg.append(`<li class="page-item"><a class="page-link" data-href="${data.next}" href="#">Next</a></li>`);
+      attachPagination('#prod-pg', loadProducts);
+    }
+  });
+}
+$('#prod-search-btn').click(()=> loadProducts());
+$(document).ready(()=> loadProducts());
+
+// CATEGORIES
+let catLast = null;
+function loadCategories(){
+  $.ajax({ url:'/api/categories/', headers:{'Authorization':'Bearer '+token},
+    success: data => {
+      $('#cat-list').empty();
+      data.forEach(c=>{
+        $('#cat-list').append(`<li class="list-group-item"><a href="#" data-id="${c.id}">${c.name}</a></li>`);
+      });
+      $('#cat-list a').click(function(e){
+        e.preventDefault();
+        const id = $(this).data('id');
+        loadCatProducts(`/api/categories/${id}/products/`);
+      });
+    }
+  });
+}
+function loadCatProducts(url, pageText){
+  if (pageText==='Prev'&&catLast.previous) url=catLast.previous;
+  if (pageText==='Next'&&catLast.next) url=catLast.next;
+  $.ajax({ url, headers:{'Authorization':'Bearer '+token},
+    success: d => {
+      catLast = d;
+      $('#cat-title').text('Products');
+      $('#cat-prods').empty();
+      d.results.forEach(p=>{
+        $('#cat-prods').append(`<div><a href="#" data-id="${p.id}">${p.name}</a> — $${p.final_price}</div>`);
+      });
+      const pg = $('#cat-pg').empty(), tot=Math.ceil(d.count/pageSize);
+      if(d.previous) pg.append(`<li class="page-item"><a class="page-link" data-href="${d.previous}" href="#">Prev</a></li>`);
+      for(let i=1;i<=tot;i++){
+        pg.append(`<li class="page-item${i===getPage(d)?' active':''}">
+          <a class="page-link" data-href="/api/categories/${new URL(url).pathname.split('/')[2]}/products/?page=${i}" href="#">${i}</a></li>`);
+      }
+      if(d.next) pg.append(`<li class="page-item"><a class="page-link" data-href="${d.next}" href="#">Next</a></li>`);
+      attachPagination('#cat-pg', loadCatProducts);
+    }
+  });
+}
+loadCategories();
+
+// BRANDS
+let brandLast = null;
+function loadBrands(){
+  $.ajax({ url:'/api/brands/', headers:{'Authorization':'Bearer '+token},
+    success: data => {
+      $('#brand-list').empty();
+      data.forEach(b=>{
+        $('#brand-list').append(`<li class="list-group-item"><a href="#" data-id="${b.id}">${b.name}</a></li>`);
+      });
+      $('#brand-list a').click(function(e){
+        e.preventDefault();
+        loadBrandProducts(`/api/brands/${$(this).data('id')}/products/`);
+      });
+    }
+  });
+}
+function loadBrandProducts(url, pageText){
+  if (pageText==='Prev'&&brandLast.previous) url=brandLast.previous;
+  if (pageText==='Next'&&brandLast.next) url=brandLast.next;
+  $.ajax({ url, headers:{'Authorization':'Bearer '+token},
+    success: d=>{
+      brandLast = d;
+      $('#brand-title').text('Products');
+      $('#brand-prods').empty();
+      d.results.forEach(p=> $('#brand-prods').append(`<div>${p.name} — $${p.final_price}</div>`));
+      const pg=$('#brand-pg').empty(), tot=Math.ceil(d.count/pageSize);
+      if(d.previous) pg.append(`<li class="page-item"><a class="page-link" data-href="${d.previous}" href="#">Prev</a></li>`);
+      for(let i=1;i<=tot;i++){
+        pg.append(`<li class="page-item${i===getPage(d)?' active':''}">
+          <a class="page-link" data-href="/api/brands/${new URL(url).pathname.split('/')[2]}/products/?page=${i}" href="#">${i}</a></li>`);
+      }
+      if(d.next) pg.append(`<li class="page-item"><a class="page-link" data-href="${d.next}" href="#">Next</a></li>`);
+      attachPagination('#brand-pg', loadBrandProducts);
+    }
+  });
+}
+loadBrands();
+
+// TOP RATED
+let topLast = null;
+function loadTopRated(url, pageText){
+  url = (pageText==='Prev'&&topLast.previous)? topLast.previous
+      : (pageText==='Next'&&topLast.next)? topLast.next
+      : '/api/products/top-rated/';
+  $.ajax({ url, headers:{'Authorization':'Bearer '+token},
+    success: d=>{
+      topLast = d;
+      $('#top-list').empty();
+      d.results.forEach(p=> $('#top-list').append(`<div>${p.name} — ${p.avg_rating}</div>`));
+      const pg=$('#top-pg').empty(), tot=Math.ceil(d.count/pageSize);
+      if(d.previous) pg.append(`<li class="page-item"><a class="page-link" data-href="${d.previous}" href="#">Prev</a></li>`);
+      for(let i=1;i<=tot;i++){
+        pg.append(`<li class="page-item${i===getPage(d)?' active':''}">
+          <a class="page-link" data-href="/api/products/top-rated/?page=${i}" href="#">${i}</a></li>`);
+      }
+      if(d.next) pg.append(`<li class="page-item"><a class="page-link" data-href="${d.next}" href="#">Next</a></li>`);
+      attachPagination('#top-pg', loadTopRated);
+    }
+  });
+}
+loadTopRated();
+
+// CART
+function loadCart(){
+  $.ajax({ url:'/cart/api/cart/', headers:{'Authorization':'Bearer '+token},
+    success: d=>{
+      $('#cart-items').empty();
+      d.items.forEach(i=>{
+        $('#cart-items').append(`
+          <div class="cart-item d-flex justify-content-between" data-id="${i.id}">
+            <div><strong>${i.product_name}</strong><br/>$${i.product_price}</div>
+            <div>
+              <button class="btn btn-sm btn-secondary dec">-</button>
+              <span class="mx-2 qty">${i.quantity}</span>
+              <button class="btn btn-sm btn-secondary inc">+</button>
+              <button class="btn btn-sm btn-danger del">Delete</button>
+            </div>
+          </div>`);
+      });
+      $('#cart-total').text(d.final_price);
+    }
+  });
+}
+$(document).on('click','.inc,.dec',function(){
+  const div = $(this).closest('.cart-item'),
+        id  = div.data('id'),
+        q0  = +div.find('.qty').text(),
+        q1  = $(this).hasClass('inc')? q0+1 : Math.max(1,q0-1);
+  $.ajax({
+    url:`/cart/api/items/${id}/`, method:'PATCH', contentType:'application/json',
+    headers:{'Authorization':'Bearer '+token},
+    data:JSON.stringify({quantity:q1}),
+    success:loadCart
+  });
+});
+$(document).on('click','.del',function(){
+  $.ajax({
+    url:`/cart/api/items/${$(this).closest('.cart-item').data('id')}/`,
+    method:'DELETE', headers:{'Authorization':'Bearer '+token},
+    success:loadCart
+  });
+});
+$('#apply-discount').click(function(){
+  const code = $('#discount-code').val().trim();
+  if(!code) return alert('Enter code');
+  $.ajax({
+    url:'/cart/api/apply-discount/', method:'POST', contentType:'application/json',
+    headers:{'Authorization':'Bearer '+token},
+    data:JSON.stringify({code}),
+    success:r=>{alert(r.detail); loadCart();}
+  });
+});
+$('#checkout-btn').click(()=> {
+  $.ajax({
+    url:'/cart/api/checkout/', method:'POST',
+    headers:{'Authorization':'Bearer '+token},
+    success:r=>{alert(r.detail); loadCart();}
+  });
+});
+loadCart();
+
+// Utility getPage
+function getPage(d){
+  if(!d.previous&&!d.next) return 1;
+  if(d.previous&&d.next) return parseInt((new URL(d.next)).searchParams.get('page'))-1;
+  if(d.next) return parseInt((new URL(d.next)).searchParams.get('page'))-1;
+  return parseInt((new URL(d.previous)).searchParams.get('page'))+1;
+}
+</script>
+</body>
+</html>
