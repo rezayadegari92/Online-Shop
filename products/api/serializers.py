@@ -36,6 +36,8 @@ class ProductSerializer(serializers.ModelSerializer):
     comments = CommentSerializer(many=True, read_only=True)
     category = serializers.StringRelatedField(read_only=True)
     discounted_price = serializers.DecimalField(max_digits=10,decimal_places=2, read_only=True)
+    price_range = serializers.SerializerMethodField(read_only=True)  # ✅ اضافه شده
+
     
     class Meta:
         model = Product
@@ -52,6 +54,7 @@ class ProductSerializer(serializers.ModelSerializer):
             'avg_rating',
             'images',
             'comments',
+            'price_range',
         )
         read_only_fields = (
             'id',
@@ -66,6 +69,7 @@ class ProductSerializer(serializers.ModelSerializer):
             'quantity',
             'images',
             'comments',
+            'price_range',
         )
     
     def get_avg_rating(self, obj):
@@ -75,6 +79,15 @@ class ProductSerializer(serializers.ModelSerializer):
         return None
     def get_final_price(self, obj):
         return obj.final_price
+    
+    def get_price_range(self, obj):
+        # پیدا کردن مینیمم و ماکزیمم قیمت کل محصولات
+        prices = Product.objects.values_list('price', flat=True)
+        if prices:
+            min_price = min(prices)
+            max_price = max(prices)
+            return {'min': min_price, 'max': max_price}
+        return {'min': 0, 'max': 0}
 
 class ProductRatingSerializer(serializers.ModelSerializer):
     user = serializers.StringRelatedField(read_only=True)
