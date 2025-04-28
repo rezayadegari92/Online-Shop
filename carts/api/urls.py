@@ -4,7 +4,7 @@ from .views import CartItemListCreateView, CartItemUpdateDeleteView , CartRetrie
 urlpatterns = [
     path('items/', CartItemListCreateView.as_view(), name='cart-item-list-create'),
     path('items/<int:pk>/', CartItemUpdateDeleteView.as_view(), name='cart-item-update-delete'),
-    path('', CartRetrieveView.as_view(), name='cart-detail'),
+    path('cart/', CartRetrieveView.as_view(), name='cart-detail'),
     path('apply-discount/', ApplyDiscountView.as_view(), name='apply-discount'),
     path('checkout/', CheckoutView.as_view(), name='cart-checkout'),
 ]
