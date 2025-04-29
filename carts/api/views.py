@@ -7,7 +7,7 @@ from decimal import Decimal
 from django.shortcuts import get_object_or_404
 
 class CartItemListCreateView(generics.ListCreateAPIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
 
     def get_serializer_class(self):
         if self.request.method == 'POST':
@@ -27,7 +27,7 @@ class CartItemListCreateView(generics.ListCreateAPIView):
         serializer.save(cart=cart)
 
 class CartItemUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
     queryset = CartItem.objects.all()
     serializer_class = CartItemSerializer
 
@@ -44,7 +44,7 @@ from rest_framework.views import APIView
 from .serializers import CartSerializer
 
 class CartRetrieveView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
 
     def get(self, request):
         cart, _ = Cart.objects.get_or_create(user=request.user)
@@ -55,7 +55,7 @@ class CartRetrieveView(APIView):
 # cart/api/v1/views.py (ادامه)
 
 class ApplyDiscountView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
 
     def post(self, request):
         serializer = ApplyDiscountSerializer(data=request.data)
