@@ -1,5 +1,5 @@
 from rest_framework import viewsets, status, permissions, filters
-from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -100,8 +100,14 @@ class ProductListView(APIView):
         return paginator.get_paginated_response(serializer.data)
 
 
-
 class ProductDetailView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    # def get_permissions(self):
+    #     if self.request.method == "POST":
+    #         return[IsAuthenticated()]
+    #     return [AllowAny()]
+        
     def get(self, request, pk):
         try:
             product = Product.objects.get(pk=pk)
@@ -147,9 +153,10 @@ class ProductDetailView(APIView):
 class CategoryListView(APIView):
     permission_classes = [permissions.AllowAny]
     def get(self, request):
-        categories = Category.objects.filter(parent=None)  # فقط کتگوری‌های اصلی
-        serializer = CategorySerializer(categories, many=True, context={'request': request})
+        roots = Category.objects.filter(parent=None)
+        serializer = CategorySerializer(roots, many=True, context={'request': request})
         return Response(serializer.data)
+
 
 
 class CategoryProductsView(APIView):
