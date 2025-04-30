@@ -22,12 +22,32 @@ class Order(models.Model):
         ('completed', 'Completed'),
         ('canceled', 'Canceled'),
     ]
+    PAYMENT_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('paid', 'Paid'),
+        ('failed', 'Failed'),
+        ('refunded', 'Refunded'),
+    ]
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="orders")
     created_at = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    payment_status = models.CharField(
+        max_length=20,
+        choices=PAYMENT_STATUS_CHOICES,
+        default='pending',
+        verbose_name="Payment Status"
+    )
     discount_code = models.ForeignKey(DiscountCode, on_delete=models.SET_NULL, null=True, blank=True)
     total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    # Snapshot 
+    shipping_city = models.CharField(max_length=100, null=True, blank=True)
+    shipping_state = models.CharField(max_length=100, null=True, blank=True)
+    shipping_street = models.CharField(max_length=255, null=True, blank=True)
+    shipping_postal_code = models.CharField(max_length=20, null=True, blank=True)
+    shipping_country = models.CharField(max_length=100, default="Iran")
+    shipping_phone_number = models.CharField(max_length=13, null=True, blank=True)
 
     def calculate_total_price(self):
         """ Calculate total price based on items and discount code """
