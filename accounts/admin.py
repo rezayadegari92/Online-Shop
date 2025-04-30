@@ -4,6 +4,63 @@ from .models import User
 from addresses.models import Address  # Import Address model
 from .forms import UserCreationForm
 
+
+
+class RoleBasedAdmin(admin.ModelAdmin):
+    restricted_models_for_operator = ['user', 'product']
+
+    def is_restricted_model(self):
+        model_cls = getattr(self, 'model', None)
+        if not model_cls:
+            return False
+        if getattr(model_cls._meta, 'abstract', False):
+            return False
+        return model_cls._meta.model_name in self.restricted_models_for_operator
+
+    def has_module_permission(self, request):
+        if not request.user.is_authenticated:
+            return False
+        # اجازهٔ دیدن ماژول (اپ) در صفحهٔ اصلی ادمین
+        user_type = request.user.user_type
+        if user_type == 'manager':
+            return True
+        if user_type == 'supervisor':
+            return True
+        if user_type == 'operator' and not self.is_restricted_model():
+            return True
+        return False
+
+    def has_view_permission(self, request, obj=None):
+        if not request.user.is_authenticated:
+            return False
+        return request.user.user_type in ['manager', 'supervisor', 'operator']
+
+    def has_add_permission(self, request):
+        if not request.user.is_authenticated:
+            return False
+        if request.user.user_type == 'manager':
+            return True
+        if request.user.user_type == 'operator' and not self.is_restricted_model():
+            return True
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        if not request.user.is_authenticated:
+            return False
+        if request.user.user_type == 'manager':
+            return True
+        if request.user.user_type == 'operator' and not self.is_restricted_model():
+            return True
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        if not request.user.is_authenticated:
+            return False
+        return request.user.user_type == 'manager'
+
+
+
+
 class AddressInline(admin.TabularInline):
     model = Address
     extra = 1

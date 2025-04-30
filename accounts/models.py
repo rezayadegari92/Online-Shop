@@ -20,7 +20,6 @@ class User(AbstractBaseUser, PermissionsMixin):
     first_name = models.CharField(max_length=30, blank=True)
     last_name = models.CharField(max_length=30, blank=True)
     birth_date = models.DateField(null=True, blank=True)
-    # address = models.ForeignKey(Address, null=True, blank=True, on_delete=models.SET_NULL)
     
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)  
