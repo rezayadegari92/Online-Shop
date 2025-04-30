@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django import forms
 from .models import Category, Product, Comment, ProductImage, Brand, Rating
+from accounts.admin import RoleBasedAdmin
 
 
 class ProductImageInline(admin.TabularInline):  
@@ -10,7 +11,7 @@ class ProductImageInline(admin.TabularInline):
 
 
 @admin.register(Category)
-class CategoryAdmin(admin.ModelAdmin):
+class CategoryAdmin(RoleBasedAdmin):
     """ Admin configuration for categories """
     list_display = ("name", "parent")  # Show category name and parent category
     search_fields = ("name",)  # Enable search by category name
@@ -30,7 +31,7 @@ class ProductForm(forms.ModelForm):
         )
     )
 @admin.register(Product)
-class ProductAdmin(admin.ModelAdmin):
+class ProductAdmin(RoleBasedAdmin):
     """ Admin configuration for products """
     form = ProductForm  # Use the custom form for product
     list_display = ("name", "price", "brand","discount_percent", "discounted_price", "category", "quantity", "average_rating")
@@ -45,7 +46,7 @@ class ProductAdmin(admin.ModelAdmin):
         return form
 
 @admin.register(Comment)
-class CommentAdmin(admin.ModelAdmin):
+class CommentAdmin(RoleBasedAdmin):
     """ Admin configuration for comments """
     list_display = ("product", "author", "created_at")
     search_fields = ("product__name", "author__username")  # Enable search by product name and author username
@@ -53,13 +54,13 @@ class CommentAdmin(admin.ModelAdmin):
 
 
 @admin.register(ProductImage)
-class ProductImageAdmin(admin.ModelAdmin):
+class ProductImageAdmin(RoleBasedAdmin):
     """ Admin configuration for product images """
     list_display = ("product", "image")
 
 
 @admin.register(Brand)
-class BrandAdmin(admin.ModelAdmin):
+class BrandAdmin(RoleBasedAdmin):
     """ Admin configuration for brands """
     list_display = ("name","website")
     """ Show brand name and website """
@@ -67,5 +68,5 @@ class BrandAdmin(admin.ModelAdmin):
 
 
 @admin.register(Rating)
-class RatingAdmin(admin.ModelAdmin):
+class RatingAdmin(RoleBasedAdmin):
     list_display = ['product', 'user', 'value']    

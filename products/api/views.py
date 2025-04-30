@@ -127,24 +127,27 @@ class ProductDetailView(APIView):
         action = request.data.get('action')
 
         if action == 'comment':
-            serializer = CommentSerializer(data=request.data)
+            data = {'content': request.data.get('content')}
+            serializer = CommentSerializer(data=data)
             if serializer.is_valid():
+                # product و author را اینجا صریحاً ست می‌کنیم
                 serializer.save(author=request.user, product=product)
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
         elif action == 'rate':
+            data = {'value': request.data.get('rating')}
             try:
                 rating = product.ratings.get(user=request.user)
-                serializer = ProductRatingSerializer(rating, data=request.data, partial=True)
+                serializer = ProductRatingSerializer(rating, data=data, partial=True)
             except Rating.DoesNotExist:
-                serializer = ProductRatingSerializer(data=request.data)
+                serializer = ProductRatingSerializer(data=data)
 
             if serializer.is_valid():
                 serializer.save(user=request.user, product=product)
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
         else:
             return Response({'detail': 'Invalid action.'}, status=status.HTTP_400_BAD_REQUEST)
 

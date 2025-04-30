@@ -22,10 +22,12 @@ class ProductImageSerializer(serializers.ModelSerializer):
 
 class CommentSerializer(serializers.ModelSerializer):
     author = serializers.StringRelatedField(read_only=True)
+    product = serializers.PrimaryKeyRelatedField(read_only=True)
+
     class Meta:
         model = Comment
         fields = ('id', 'author', 'content', 'created_at', 'product')
-        read_only_fields = ('id', 'created_at','author',)
+        read_only_fields = ('id', 'created_at','author','product')
        
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -91,11 +93,13 @@ class ProductSerializer(serializers.ModelSerializer):
 
 class ProductRatingSerializer(serializers.ModelSerializer):
     user = serializers.StringRelatedField(read_only=True)
+    product = serializers.PrimaryKeyRelatedField(read_only=True)
+
 
     class Meta:
         model = Rating
         fields = ('id', 'user', 'product', 'value')
-        read_only_fields = ('user', 'user',)
+        read_only_fields = ('user', 'user','product')
     
 
 class CategorySerializer(serializers.ModelSerializer):
