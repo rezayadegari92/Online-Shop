@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Store</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .clickable { cursor: pointer; }
+        .product-card { transition: transform 0.3s; }
+        .product-card:hover { transform: translateY(-5px); }
+        #cart-sidebar {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 400px;
+            height: 100%;
+            background: white;
+            z-index: 1000;
+            transition: right 0.3s;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        #cart-sidebar.open { right: 0; }
+        .subcategories { display: none; padding-left: 15px; }
+        .subcategories.show { display: block; }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <header class="py-3 mb-4 border-bottom">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="h3">Simple Store</h1>
+                <button id="cart-toggle" class="btn btn-primary position-relative">
+                    Cart <span id="cart-count" class="badge bg-danger">0</span>
+                </button>
+            </div>
+        </header>
+
+        <div class="row">
+            <!-- Categories -->
+            <div class="col-md-3">
+                <div class="card mb-4">
+                    <div class="card-header">Categories</div>
+                    <div class="card-body p-0">
+                        <ul id="categories" class="list-group list-group-flush"></ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Products -->
+            <div class="col-md-9">
+                <div class="row" id="products-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cart Sidebar -->
+    <div id="cart-sidebar">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3>Your Cart</h3>
+            <button id="close-cart" class="btn btn-sm btn-outline-danger">&times;</button>
+        </div>
+        <div id="cart-items"></div>
+        <div class="mt-3">
+            <div class="d-flex justify-content-between mb-2">
+                <span>Total:</span>
+                <span id="cart-total">$0.00</span>
+            </div>
+            <button id="checkout-btn" class="btn btn-success w-100">Checkout</button>
+        </div>
+    </div>
+
+    <!-- Product Modal -->
+    <div class="modal fade" id="productModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Product Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="productModalBody"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            // Global variables
+            let accessToken = localStorage.getItem('accessToken');
+            
+            // Initialize
+            loadCategories();
+            loadProducts();
+            
+            // Load categories with subcategories
+            function loadCategories() {
+                $.ajax({
+                    url: '/api/categories/',
+                    headers: { 'Authorization': 'Bearer ' + accessToken },
+                    success: function(data) {
+                        let html = '';
+                        data.forEach(category => {
+                            html += `
+                                <li class="list-group-item clickable category-item" data-id="${category.id}">
+                                    ${category.name}
+                                    ${category.subcategories ? `
+                                        <ul class="subcategories">
+                                            ${category.subcategories.map(sub => `
+                                                <li class="clickable subcategory-item" data-id="${sub.id}">${sub.name}</li>
+                                            `).join('')}
+                                        </ul>
+                                    ` : ''}
+                                </li>
+                            `;
+                        });
+                        $('#categories').html(html);
+                        
+                        // Handle category clicks
+                        $('.category-item').click(function() {
+                            const id = $(this).data('id');
+                            const hasSub = $(this).find('.subcategories').length > 0;
+                            if (hasSub) {
+                                $(this).find('.subcategories').toggleClass('show');
+                            } else {
+                                loadProductsByCategory(id);
+                            }
+                        });
+                        
+                        $('.subcategory-item').click(function(e) {
+                            e.stopPropagation();
+                            loadProductsByCategory($(this).data('id'));
+                        });
+                    }
+                });
+            }
+            
+            // Load all products
+            function loadProducts() {
+                $.ajax({
+                    url: '/api/products/',
+                    headers: { 'Authorization': 'Bearer ' + accessToken },
+                    success: function(data) {
+                        displayProducts(data.results);
+                    }
+                });
+            }
+            
+            // Load products by category
+            function loadProductsByCategory(categoryId) {
+                $.ajax({
+                    url: `/api/categories/${categoryId}/products/`,
+                    headers: { 'Authorization': 'Bearer ' + accessToken },
+                    success: function(data) {
+                        displayProducts(data.results);
+                    }
+                });
+            }
+            
+            // Display products
+            function displayProducts(products) {
+                let html = '';
+                products.forEach(product => {
+                    html += `
+                        <div class="col-md-4 mb-4">
+                            <div class="card product-card h-100">
+                                <img src="${product.images[0]?.image_url || 'default.jpg'}" class="card-img-top">
+                                <div class="card-body">
+                                    <h5>${product.name}</h5>
+                                    <p>$${product.price}</p>
+                                    <button class="btn btn-sm btn-primary add-to-cart" data-id="${product.id}">Add to Cart</button>
+                                    <button class="btn btn-sm btn-link view-details" data-id="${product.id}">Details</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                $('#products-container').html(html);
+                
+                // Add event handlers
+                $('.add-to-cart').click(function() {
+                    addToCart($(this).data('id'));
+                });
+                
+                $('.view-details').click(function() {
+                    showProductDetails($(this).data('id'));
+                });
+            }
+            
+            // Show product details
+            function showProductDetails(productId) {
+                $.ajax({
+                    url: `/api/products/${productId}/`,
+                    headers: { 'Authorization': 'Bearer ' + accessToken },
+                    success: function(product) {
+                        $('#productModalBody').html(`
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <img src="${product.images[0]?.image_url}" class="img-fluid">
+                                </div>
+                                <div class="col-md-6">
+                                    <h3>${product.name}</h3>
+                                    <p>$${product.price}</p>
+                                    <p>${product.details}</p>
+                                    <button class="btn btn-primary add-to-cart-modal" data-id="${product.id}">Add to Cart</button>
+                                </div>
+                            </div>
+                        `);
+                        
+                        $('.add-to-cart-modal').click(function() {
+                            addToCart($(this).data('id'));
+                        });
+                        
+                        new bootstrap.Modal('#productModal').show();
+                    }
+                });
+            }
+            
+            // Add to cart
+            function addToCart(productId) {
+                if (!accessToken) {
+                    alert('Please login first');
+                    return;
+                }
+                
+                $.ajax({
+                    url: '/cart/api/items/',
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': 'Bearer ' + accessToken,
+                        'Content-Type': 'application/json'
+                    },
+                    data: JSON.stringify({ product: productId, quantity: 1 }),
+                    success: function() {
+                        updateCart();
+                    }
+                });
+            }
+            
+            // Update cart
+            function updateCart() {
+                $.ajax({
+                    url: '/cart/api/cart/',
+                    headers: { 'Authorization': 'Bearer ' + accessToken },
+                    success: function(data) {
+                        let html = '';
+                        let total = 0;
+                        
+                        data.items.forEach(item => {
+                            html += `<div>${item.product_name} x ${item.quantity}</div>`;
+                            total += item.quantity * item.product_price;
+                        });
+                        
+                        $('#cart-items').html(html);
+                        $('#cart-count').text(data.items.length);
+                        $('#cart-total').text('$' + total.toFixed(2));
+                    }
+                });
+            }
+            
+            // Cart toggle
+            $('#cart-toggle').click(function() {
+                if (accessToken) {
+                    updateCart();
+                    $('#cart-sidebar').addClass('open');
+                } else {
+                    alert('Please login first');
+                }
+            });
+            
+            $('#close-cart').click(function() {
+                $('#cart-sidebar').removeClass('open');
+            });
+            
+            // Checkout
+            $('#checkout-btn').click(function() {
+                $.ajax({
+                    url: '/cart/api/checkout/',
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + accessToken },
+                    success: function() {
+                        alert('Order placed!');
+                        $('#cart-sidebar').removeClass('open');
+                        updateCart();
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

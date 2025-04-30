@@ -143,7 +143,7 @@
             };
 
             try {
-                const response = await fetch('/accounts/api/token/', {
+                const response = await fetch('/api/token/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -165,7 +165,7 @@
                     
                     // Redirect to dashboard
                     setTimeout(() => {
-                        window.location.href = 'http://127.0.0.1:8000/home/';
+                        window.location.href = 'http://127.0.0.1:8000/products/';
                     }, 1500);
                 } else {
                     throw new Error(data.detail || 'Invalid credentials');
