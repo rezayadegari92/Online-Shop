@@ -76,44 +76,62 @@ class ApplyDiscountView(APIView):
 
 from orders.models import Order, OrderItem
 
+# orders/api/v1/views.py
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from addresses.models import Address
+from carts.models import Cart
+from orders.models import Order, OrderItem
+
 class CheckoutView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         user = request.user
-        cart = get_object_or_404(Cart, user=user)
+
+        # آدرس پیش‌فرض
+        try:
+            address = Address.objects.get(user=user, is_default=True)
+        except Address.DoesNotExist:
+            return Response({"detail": "هیچ آدرس پیش‌فرضی ثبت نشده!"}, status=400)
+
+        # بررسی سبد خرید
+        try:
+            cart = Cart.objects.get(user=user)
+        except Cart.DoesNotExist:
+            return Response({"detail": "سبد خرید پیدا نشد!"}, status=400)
 
         if not cart.items.exists():
-            return Response({"detail": "سبد خرید شما خالی است."}, status=400)
+            return Response({"detail": "سبد خرید خالی است!"}, status=400)
 
-        # 1. ساخت Order
+        # ایجاد سفارش با snapshot آدرس
         order = Order.objects.create(
             user=user,
+            shipping_city=address.city,
+            shipping_state=address.state,
+            shipping_street=address.street,
+            shipping_postal_code=address.postal_code,
+            shipping_country=address.country,
+            shipping_phone_number=address.phone_number,
             discount_code=cart.discount_code,
         )
 
-        total = Decimal(0)
+        # انتقال آیتم‌ها از سبد خرید
         for item in cart.items.all():
-            # ساخت OrderItem
-            order_item = OrderItem.objects.create(
+            OrderItem.objects.create(
                 order=order,
                 product=item.product,
                 quantity=item.quantity,
-                price_at_purchase=item.product.discounted_price,
+                price_at_purchase=item.product.discounted_price
             )
-            total += order_item.get_total_price()
 
-        # 2. اعمال تخفیف
-        if cart.discount_code:
-            discount_amount = (total * cart.discount_code.discount_percent) / 100
-            total -= discount_amount
+        # محاسبه قیمت
+        order.calculate_total_price()
 
-        order.total_price = total
-        order.save()
-
-        # 3. پاک‌سازی سبد خرید
+        # خالی کردن سبد خرید
         cart.items.all().delete()
         cart.discount_code = None
         cart.save()
 
-        return Response({"detail": f"سفارش {order.id} با موفقیت ثبت شد."})
+        return Response({"detail": "سفارش با موفقیت ثبت شد.", "order_id": order.id})
