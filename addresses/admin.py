@@ -2,9 +2,10 @@
 from django.contrib import admin
 from .models import Address
 from django.utils.html import format_html
+from accounts.admin import RoleBasedAdmin
 
 @admin.register(Address)
-class AddressAdmin(admin.ModelAdmin):
+class AddressAdmin(RoleBasedAdmin):
     list_display = ('user_info', 'street', 'city', 'state', 'postal_code', 'country', 'phone_number','is_default')
     list_filter = ('country', 'state', 'is_default')
     search_fields = ('city', 'street', 'user__username', 'user__email')
