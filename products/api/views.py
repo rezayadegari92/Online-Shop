@@ -2,6 +2,8 @@ from rest_framework import viewsets, status, permissions, filters
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
+
 
 from products.models import Category, Product, Comment, Rating
 from .serializers import (
@@ -214,3 +216,51 @@ class BrandProductsView(APIView):
         paginated_products = paginator.paginate_queryset(products, request)
         serializer = ProductSerializer(paginated_products, many=True, context={'request': request})
         return paginator.get_paginated_response(serializer.data)
+
+
+class DiscountedProductList(APIView):
+    permission_classes = [permissions.AllowAny]
+    def get(self, request):
+        products = Product.objects.exclude(discount_percent=0)
+        serializer = ProductSerializer(products, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+
+
+class DiscountedProductDetailView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, pk):
+        products = Product.objects.filter(discount_percent__gt=0)
+        if not products.exists():
+            return Response({"message": "No discounted products available"}, status=status.HTTP_404_NOT_FOUND)
+        serializer = ProductSerializer(products, context={'request': request})
+        return Response(serializer.data)
+
+    def post(self, request, pk):
+        product = get_object_or_404(Product, pk=pk, discount_percent__gt=0)
+        action = request.data.get('action')
+
+        if action == 'comment':
+            data = {'content': request.data.get('content')}
+            serializer = CommentSerializer(data=data)
+            if serializer.is_valid():
+                serializer.save(author=request.user, product=product)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        elif action == 'rate':
+            data = {'value': request.data.get('rating')}
+            try:
+                rating = product.ratings.get(user=request.user)
+                serializer = ProductRatingSerializer(rating, data=data, partial=True)
+            except Rating.DoesNotExist:
+                serializer = ProductRatingSerializer(data=data)
+
+            if serializer.is_valid():
+                serializer.save(user=request.user, product=product)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({'detail': 'Invalid action.'}, status=status.HTTP_400_BAD_REQUEST)
