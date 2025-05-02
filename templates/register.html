@@ -273,7 +273,7 @@
           fullWelcome.innerText = `🎉 Welcome, ${currentUsername}!`;
           fullWelcome.style.display = 'flex';
           setTimeout(() => {
-            window.location.href = "/";
+            window.location.href = "http://127.0.0.1:8000/products/";
           }, 2000);
         } else {
           errorDiv.innerText = body.error || "Invalid or expired OTP.";

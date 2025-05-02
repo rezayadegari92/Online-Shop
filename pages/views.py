@@ -9,12 +9,15 @@ def home(request):
 def products(request):
     return render(request, "test2.html")
 
-def product_detail(request):
-    return render(request, "product_detail.html")
+def discounts(request):
+    return render(request, "discounts.html")
+
+def test(request):
+    return render(request, "test.html")
 
 
 def categories(request):
-    return render(request, "categories.html")
+    return render(request, "products.html")
 
 
 def category_products(request):
