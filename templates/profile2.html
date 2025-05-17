@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile & Address Management</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .section {
+            flex: 1;
+            min-width: 300px;
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        h2 {
+            margin-top: 0;
+            color: #2c3e50;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin: 10px 0 5px;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+        .message {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .address-list {
+            margin-top: 20px;
+        }
+        .address-item {
+            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        .address-item h3 {
+            margin-top: 0;
+        }
+        .address-actions {
+            margin-top: 10px;
+        }
+        .address-actions button {
+            margin-right: 5px;
+            padding: 5px 10px;
+            font-size: 0.8em;
+        }
+        .default-badge {
+            background: #28a745;
+            color: white;
+            padding: 3px 6px;
+            border-radius: 3px;
+            font-size: 0.8em;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <button id="logout-btn" style="position: fixed; top: 20px; right: 20px;">Logout</button>
+
+    <div class="container">
+        <!-- Profile Section -->
+        <div class="section">
+            <h2>Profile Information</h2>
+            <div id="profile-message" class="message" style="display: none;"></div>
+            <form id="profile-form">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" required>
+                
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required>
+                
+                <label for="first_name">First Name:</label>
+                <input type="text" id="first_name" name="first_name">
+                
+                <label for="last_name">Last Name:</label>
+                <input type="text" id="last_name" name="last_name">
+                
+                <label for="birth_date">Birth Date:</label>
+                <input type="date" id="birth_date" name="birth_date">
+                
+                <button type="submit">Update Profile</button>
+            </form>
+        </div>
+
+        <!-- Address Section -->
+        <div class="section">
+            <h2>Address Management</h2>
+            <div id="address-message" class="message" style="display: none;"></div>
+            
+            <h3>Add New Address</h3>
+            <form id="address-form">
+                <input type="hidden" id="address-id" name="id">
+                
+                <label for="state">State:</label>
+                <input type="text" id="state" name="state" required>
+                
+                <label for="city">City:</label>
+                <input type="text" id="city" name="city" required>
+                
+                <label for="street">Street:</label>
+                <input type="text" id="street" name="street" required>
+                
+                <label for="postal_code">Postal Code:</label>
+                <input type="text" id="postal_code" name="postal_code" required>
+                
+                <label for="phone_number">Phone Number:</label>
+                <input type="text" id="phone_number" name="phone_number" required>
+                
+                <label>
+                    <input type="checkbox" id="is_default" name="is_default"> Set as default address
+                </label>
+                
+                <button type="submit" id="address-submit-btn">Add Address</button>
+                <button type="button" id="cancel-edit-btn" style="display: none; background: #6c757d;">Cancel</button>
+            </form>
+            
+            <div class="address-list" id="address-list">
+                <h3>Your Addresses</h3>
+                <!-- Addresses will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get CSRF token from cookies
+        function refreshToken() {
+            $.ajax({
+                url: '/accounts/api/token/refresh/',
+                method: 'POST',
+                success: function(data) {
+                    localStorage.setItem('access_token', data.access);
+                }
+            });
+        }
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        const csrftoken = getCookie('csrftoken');
+
+        // Get JWT token from localStorage (assuming you store it there after login)
+        const jwtToken = localStorage.getItem('access_token');
+
+        // Set up AJAX headers
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!(/^http:.*/.test(settings.url) || /^https:.*/.test(settings.url))) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                }
+                const jwtToken = localStorage.getItem('access_token')
+                if (jwtToken) {
+                    xhr.setRequestHeader("Authorization", "Bearer " + jwtToken);
+                }
+            }
+        });
+
+        // Load profile data
+        function loadProfile() {
+            $.ajax({
+                url: '/accounts/api/profile/',
+                method: 'GET',
+                success: function(data) {
+                    $('#username').val(data.username);
+                    $('#email').val(data.email);
+                    $('#first_name').val(data.first_name || '');
+                    $('#last_name').val(data.last_name || '');
+                    $('#birth_date').val(data.birth_date || '');
+                },
+                error: function(xhr) {
+                    showMessage('#profile-message', 'Error loading profile: ' + xhr.responseJSON?.detail || 'Unknown error', 'error');
+                }
+            });
+        }
+
+        // Update profile
+        $('#profile-form').submit(function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                username: $('#username').val(),
+                email: $('#email').val(),
+                first_name: $('#first_name').val(),
+                last_name: $('#last_name').val(),
+                birth_date: $('#birth_date').val()
+            };
+            
+            $.ajax({
+                url: '/accounts/api/profile/',
+                method: 'PATCH',
+                contentType: 'application/json',
+                data: JSON.stringify(formData),
+                success: function() {
+                    showMessage('#profile-message', 'Profile updated successfully!', 'success');
+                },
+                error: function(xhr) {
+                    showMessage('#profile-message', 'Error updating profile: ' + 
+                        (xhr.responseJSON?.error || JSON.stringify(xhr.responseJSON) || 'Unknown error'), 'error');
+                }
+            });
+        });
+
+        // Load addresses
+        function loadAddresses() {
+            $.ajax({
+                url: '/api/addresses/',
+                method: 'GET',
+                success: function(data) {
+                    $('#address-list').html('<h3>Your Addresses</h3>');
+                    if (data.length === 0) {
+                        $('#address-list').append('<p>No addresses found. Add your first address above.</p>');
+                    } else {
+                        data.forEach(function(address) {
+                            const addressHtml = `
+                                <div class="address-item" data-id="${address.id}">
+                                    <h3>${address.city}, ${address.state} ${address.is_default ? '<span class="default-badge">Default</span>' : ''}</h3>
+                                    <p>${address.street}</p>
+                                    <p>Postal Code: ${address.postal_code}</p>
+                                    <p>Phone: ${address.phone_number}</p>
+                                    <div class="address-actions">
+                                        <button onclick="editAddress(${address.id})">Edit</button>
+                                        <button onclick="deleteAddress(${address.id})">Delete</button>
+                                        ${!address.is_default ? `<button onclick="setDefaultAddress(${address.id})">Set as Default</button>` : ''}
+                                    </div>
+                                </div>
+                            `;
+                            $('#address-list').append(addressHtml);
+                        });
+                    }
+                },
+                error: function(xhr) {
+                    showMessage('#address-message', 'Error loading addresses: ' + xhr.responseJSON?.detail || 'Unknown error', 'error');
+                }
+            });
+        }
+
+        // Handle address form submission (create/update)
+        $('#address-form').submit(function(e) {
+            e.preventDefault();
+            
+            const addressId = $('#address-id').val();
+            const url = addressId ? `/api/addresses/${addressId}/` : '/api/addresses/';
+            const method = addressId ? 'PUT' : 'POST';
+            
+            const formData = {
+                state: $('#state').val(),
+                city: $('#city').val(),
+                street: $('#street').val(),
+                postal_code: $('#postal_code').val(),
+                phone_number: $('#phone_number').val(),
+                is_default: $('#is_default').is(':checked')
+            };
+            
+            $.ajax({
+                url: url,
+                method: method,
+                contentType: 'application/json',
+                data: JSON.stringify(formData),
+                success: function() {
+                    resetAddressForm();
+                    loadAddresses();
+                    showMessage('#address-message', `Address ${addressId ? 'updated' : 'added'} successfully!`, 'success');
+                },
+                error: function(xhr) {
+                    showMessage('#address-message', 'Error saving address: ' + 
+                        (xhr.responseJSON?.detail || JSON.stringify(xhr.responseJSON) || 'Unknown error'), 'error');
+                }
+            });
+        });
+
+        // Edit address
+        function editAddress(addressId) {
+            $('html, body').animate({
+                scrollTop: $('#address-form').offset().top - 20
+            }, 300); 
+            $.ajax({
+                url: `/api/addresses/${addressId}/`,
+                method: 'GET',
+                success: function(data) {
+                    $('#address-id').val(data.id);
+                    $('#state').val(data.state);
+                    $('#city').val(data.city);
+                    $('#street').val(data.street);
+                    $('#postal_code').val(data.postal_code);
+                    $('#phone_number').val(data.phone_number);
+                    $('#is_default').prop('checked', data.is_default);
+                    
+                    $('#address-submit-btn').text('Update Address');
+                    $('#cancel-edit-btn').show();
+                },
+                error: function(xhr) {
+                    showMessage('#address-message', 'Error loading address: ' + xhr.responseJSON?.detail || 'Unknown error', 'error');
+                }
+            });
+        }
+
+        // Cancel edit
+        $('#cancel-edit-btn').click(function() {
+            resetAddressForm();
+        });
+
+        // Delete address
+        function deleteAddress(addressId) {
+            if (!confirm('Are you sure you want to delete this address?')) return;
+            
+            $.ajax({
+                url: `/api/addresses/${addressId}/`,
+                method: 'DELETE',
+                success: function() {
+                    loadAddresses();
+                    showMessage('#address-message', 'Address deleted successfully!', 'success');
+                },
+                error: function(xhr) {
+                    showMessage('#address-message', 'Error deleting address: ' + xhr.responseJSON?.detail || 'Unknown error', 'error');
+                }
+            });
+        }
+
+        // Set default address
+        function setDefaultAddress(addressId) {
+            $.ajax({
+                url: `/api/addresses/${addressId}/set-default/`,
+                method: 'POST',
+                success: function() {
+                    loadAddresses();
+                    showMessage('#address-message', 'Default address updated successfully!', 'success');
+                },
+                error: function(xhr) {
+                    showMessage('#address-message', 'Error setting default address: ' + xhr.responseJSON?.detail || 'Unknown error', 'error');
+                }
+            });
+        }
+
+        // Reset address form
+        function resetAddressForm() {
+            $('#address-form')[0].reset();
+            $('#address-id').val('');
+            $('#address-submit-btn').text('Add Address');
+            $('#cancel-edit-btn').hide();
+        }
+
+        // Show message
+        function showMessage(selector, text, type) {
+            const $message = $(selector);
+            $message.text(text).removeClass('success error').addClass(type).show();
+            setTimeout(() => $message.fadeOut(), 5000);
+        }
+
+        // Initialize page
+        $(document).ready(function() {
+            loadProfile();
+            loadAddresses();
+        });
+    </script>
+</body>
+</html>
