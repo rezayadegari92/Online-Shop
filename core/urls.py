@@ -16,26 +16,31 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from django.conf.urls.static import static
-
 from django.conf import settings
+from django.conf.urls.static import static
 from rest_framework_simplejwt.views import TokenRefreshView, TokenObtainPairView
 
-
-
 urlpatterns = [
+    # Admin
     path('admin/', admin.site.urls),
-    path('api-auth/', include('rest_framework.urls')),
-    path('api/token/',TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path("api/token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
-    path('accounts/api/', include('accounts.api.urls'), name='accounts api' ),
-    path('api/', include('products.api.urls'), name='products api' ),
-    path('api/addresses/', include('addresses.api.urls'), name='addresses api'),
-    path("", include('accounts.urls')),
-    path("api/cart/", include('carts.api.urls'), name='cart api'),
-    path("",include("pages.urls")),
-    path("api/",include("orders.api.urls")),
     
+    # Authentication URLs
+    path('accounts/', include('accounts.urls')),
+    path('accounts/api/', include('accounts.api.urls')),
+    
+    # API URLs
+    path('api/', include('products.api.urls')),
+    path('api/cart/', include('carts.api.urls')),
+    path('api/orders/', include('orders.api.urls')),
+    path('api/addresses/', include('addresses.api.urls')),
+    path('api-auth/', include('rest_framework.urls')),
+    
+    # JWT Authentication
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
+    
+    # Pages URLs (should be last to avoid conflicts)
+    path('', include('pages.urls')),
 ]
 
 if settings.DEBUG:

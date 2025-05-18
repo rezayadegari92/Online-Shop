@@ -1,60 +1,70 @@
 # cart/api/serializers.py
 from rest_framework import serializers
-from carts.models import CartItem
+from carts.models import CartItem, Cart, DiscountCode
 from products.models import Product
+from decimal import Decimal
+
+class ProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Product
+        fields = ['id', 'name', 'price', 'discounted_price', 'image']
 
 class CartItemSerializer(serializers.ModelSerializer):
+    product = ProductSerializer(read_only=True)
     product_name = serializers.CharField(source='product.name', read_only=True)
-    product_price = serializers.DecimalField(source='product.discounted_price', max_digits=10, decimal_places=2, read_only=True)
+    product_price = serializers.DecimalField(source='product.price', max_digits=10, decimal_places=2, read_only=True)
+    product_image = serializers.ImageField(source='product.image', read_only=True)
+    total_price = serializers.SerializerMethodField()
     
     class Meta:
         model = CartItem
-        fields = ['id', 'product', 'product_name', 'product_price', 'quantity']
+        fields = ['id', 'product', 'product_name', 'product_price', 'product_image', 'quantity', 'total_price']
 
-class CartItemCreateSerializer(serializers.ModelSerializer):
-    product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all())
+    def get_total_price(self, obj):
+        return obj.quantity * obj.product.discounted_price
 
-    class Meta:
-        model = CartItem
-        fields = ['product', 'quantity']
+class CartItemCreateSerializer(serializers.Serializer):
+    product_id = serializers.IntegerField()
+    quantity = serializers.IntegerField(min_value=1)
 
+    def validate_product_id(self, value):
+        try:
+            Product.objects.get(id=value)
+            return value
+        except Product.DoesNotExist:
+            raise serializers.ValidationError("Product does not exist")
 
-from carts.models import Cart, DiscountCode
-from decimal import Decimal
+    def validate_quantity(self, value):
+        if value < 1:
+            raise serializers.ValidationError("Quantity must be at least 1")
+        return value
 
 class CartSerializer(serializers.ModelSerializer):
     items = CartItemSerializer(many=True, read_only=True)
     total_price = serializers.SerializerMethodField()
-    discount_percent = serializers.SerializerMethodField()
     final_price = serializers.SerializerMethodField()
+    is_authenticated = serializers.SerializerMethodField()
 
     class Meta:
         model = Cart
-        fields = ['id', 'items', 'discount_code', 'discount_percent', 'total_price', 'final_price']
+        fields = ['id', 'items', 'total_price', 'discount_percent', 'final_price', 'is_authenticated']
 
     def get_total_price(self, obj):
-        return sum((item.get_total_price() for item in obj.items.all()), Decimal(0))
-
-    def get_discount_percent(self, obj):
-        if obj.discount_code:
-            return obj.discount_code.discount_percent
-        return 0
+        return sum(item.quantity * item.product.discounted_price for item in obj.items.all())
 
     def get_final_price(self, obj):
         total = self.get_total_price(obj)
-        if obj.discount_code:
-            discount_amount = (total * obj.discount_code.discount_percent) / 100
-            return total - discount_amount
+        if obj.discount_percent:
+            discount = total * (obj.discount_percent / 100)
+            return total - discount
         return total
 
-
-# cart/api/serializers.py 
+    def get_is_authenticated(self, obj):
+        return bool(obj.user)
 
 class ApplyDiscountSerializer(serializers.Serializer):
-    code = serializers.CharField()
+    code = serializers.CharField(max_length=50)
 
     def validate_code(self, value):
-        try:
-            return DiscountCode.objects.get(code=value)
-        except DiscountCode.DoesNotExist:
-            raise serializers.ValidationError("discount ode is not valid.")
+        # Add your discount code validation logic here
+        return value

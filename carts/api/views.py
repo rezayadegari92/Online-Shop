@@ -1,13 +1,25 @@
 # cart/api/v1/views.py
 from rest_framework import generics, permissions
 from carts.models import Cart, CartItem
-from .serializers import CartItemSerializer, CartItemCreateSerializer ,ApplyDiscountSerializer
+from .serializers import CartItemSerializer, CartItemCreateSerializer, ApplyDiscountSerializer, CartSerializer
 from rest_framework.exceptions import ValidationError
 from decimal import Decimal
 from django.shortcuts import get_object_or_404
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.authentication import SessionAuthentication
+from django.utils import timezone
+import json
+from products.models import Product
+import logging
+
+logger = logging.getLogger(__name__)
 
 class CartItemListCreateView(generics.ListCreateAPIView):
     permission_classes = [permissions.AllowAny]
+    authentication_classes = []  # Remove authentication requirement
 
     def get_serializer_class(self):
         if self.request.method == 'POST':
@@ -15,8 +27,10 @@ class CartItemListCreateView(generics.ListCreateAPIView):
         return CartItemSerializer
 
     def get_queryset(self):
-        cart, _ = Cart.objects.get_or_create(user=self.request.user)
-        return cart.items.all()
+        if self.request.user.is_authenticated:
+            cart, _ = Cart.objects.get_or_create(user=self.request.user)
+            return cart.items.all()
+        return CartItem.objects.none()
 
     def perform_create(self, serializer):
         cart, _ = Cart.objects.get_or_create(user=self.request.user)
@@ -28,12 +42,15 @@ class CartItemListCreateView(generics.ListCreateAPIView):
 
 class CartItemUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.AllowAny]
+    authentication_classes = []  # Remove authentication requirement
     queryset = CartItem.objects.all()
     serializer_class = CartItemSerializer
 
     def get_queryset(self):
-        cart, _ = Cart.objects.get_or_create(user=self.request.user)
-        return cart.items.all()
+        if self.request.user.is_authenticated:
+            cart, _ = Cart.objects.get_or_create(user=self.request.user)
+            return cart.items.all()
+        return CartItem.objects.none()
 
 
 
@@ -56,17 +73,38 @@ class CartRetrieveView(APIView):
 
 class ApplyDiscountView(APIView):
     permission_classes = [permissions.AllowAny]
+    authentication_classes = []  # Remove authentication requirement
 
     def post(self, request):
         serializer = ApplyDiscountSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         discount_code = serializer.validated_data['code']
-        cart, _ = Cart.objects.get_or_create(user=request.user)
-        cart.discount_code = discount_code
-        cart.save()
+        if request.user.is_authenticated:
+            cart, _ = Cart.objects.get_or_create(user=request.user)
+            cart.discount_code = discount_code
+            cart.save()
+            return Response({"detail": f"Discount code '{discount_code.code}' applied successfully."})
+        else:
+            # For anonymous users, store discount in cookie
+            cart_data = request.COOKIES.get('cart', '{}')
+            try:
+                cart_data = json.loads(cart_data)
+                cart_data['discount_code'] = discount_code.code
+                response = Response({"detail": f"Discount code '{discount_code.code}' applied successfully."})
+                return self.save_cart_cookie(response, cart_data)
+            except json.JSONDecodeError:
+                return Response({"error": "Invalid cart data"}, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response({"detail": f"کد تخفیف '{discount_code.code}' با موفقیت اعمال شد."})
+    def save_cart_cookie(self, response, cart_data):
+        response.set_cookie(
+            'cart',
+            json.dumps(cart_data),
+            expires=timezone.now() + timezone.timedelta(days=7),
+            httponly=True,
+            samesite='Lax'
+        )
+        return response
 
 
 
@@ -135,3 +173,199 @@ class CheckoutView(APIView):
         cart.save()
 
         return Response({"detail": "سفارش با موفقیت ثبت شد.", "order_id": order.id})
+
+class CartView(APIView):
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []  # Allow anonymous access
+
+    def get_cart_data(self, request):
+        """Get cart data from either database or cookies"""
+        try:
+            if request.user.is_authenticated:
+                cart = request.user.cart
+                if not cart:
+                    cart = Cart.objects.create(user=request.user)
+                return cart
+            else:
+                # For anonymous users, get cart from cookie
+                cart_data = request.COOKIES.get('cart', '{}')
+                try:
+                    return json.loads(cart_data)
+                except json.JSONDecodeError:
+                    logger.warning("Invalid cart data in cookie")
+                    return {}
+        except Exception as e:
+            logger.error(f"Error getting cart data: {str(e)}")
+            return {}
+
+    def save_cart_cookie(self, response, cart_data):
+        """Save cart data to cookie"""
+        try:
+            response.set_cookie(
+                'cart',
+                json.dumps(cart_data),
+                max_age=30 * 24 * 60 * 60,  # 30 days
+                samesite='Lax',
+                secure=True
+            )
+        except Exception as e:
+            logger.error(f"Error saving cart cookie: {str(e)}")
+
+    def get(self, request):
+        """Get cart contents"""
+        try:
+            cart_data = self.get_cart_data(request)
+            if request.user.is_authenticated:
+                serializer = CartSerializer(cart_data)
+                return Response(serializer.data)
+            else:
+                # For anonymous users, return cart data from cookie
+                response = Response(cart_data)
+                self.save_cart_cookie(response, cart_data)
+                return response
+        except Exception as e:
+            logger.error(f"Error in GET cart: {str(e)}")
+            return Response(
+                {"error": "Failed to retrieve cart"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def post(self, request):
+        """Add item to cart"""
+        try:
+            serializer = CartItemCreateSerializer(data=request.data)
+            if not serializer.is_valid():
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            product_id = serializer.validated_data['product_id']
+            quantity = serializer.validated_data['quantity']
+
+            try:
+                product = Product.objects.get(id=product_id)
+            except Product.DoesNotExist:
+                return Response(
+                    {"error": "Product not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            if request.user.is_authenticated:
+                cart = request.user.cart
+                if not cart:
+                    cart = Cart.objects.create(user=request.user)
+
+                cart_item, created = CartItem.objects.get_or_create(
+                    cart=cart,
+                    product=product,
+                    defaults={'quantity': quantity}
+                )
+
+                if not created:
+                    cart_item.quantity += quantity
+                    cart_item.save()
+
+                serializer = CartSerializer(cart)
+                return Response(serializer.data)
+            else:
+                # For anonymous users, update cookie
+                cart_data = self.get_cart_data(request)
+                cart_data[str(product_id)] = cart_data.get(str(product_id), 0) + quantity
+                
+                response = Response(cart_data)
+                self.save_cart_cookie(response, cart_data)
+                return response
+
+        except Exception as e:
+            logger.error(f"Error in POST cart: {str(e)}")
+            return Response(
+                {"error": "Failed to add item to cart"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def put(self, request):
+        """Update cart item quantity"""
+        try:
+            serializer = CartItemCreateSerializer(data=request.data)
+            if not serializer.is_valid():
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            product_id = serializer.validated_data['product_id']
+            quantity = serializer.validated_data['quantity']
+
+            if request.user.is_authenticated:
+                cart = request.user.cart
+                if not cart:
+                    return Response(
+                        {"error": "Cart not found"},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+
+                try:
+                    cart_item = CartItem.objects.get(cart=cart, product_id=product_id)
+                    if quantity > 0:
+                        cart_item.quantity = quantity
+                        cart_item.save()
+                    else:
+                        cart_item.delete()
+                except CartItem.DoesNotExist:
+                    return Response(
+                        {"error": "Item not found in cart"},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+
+                serializer = CartSerializer(cart)
+                return Response(serializer.data)
+            else:
+                # For anonymous users, update cookie
+                cart_data = self.get_cart_data(request)
+                if quantity > 0:
+                    cart_data[str(product_id)] = quantity
+                else:
+                    cart_data.pop(str(product_id), None)
+                
+                response = Response(cart_data)
+                self.save_cart_cookie(response, cart_data)
+                return response
+
+        except Exception as e:
+            logger.error(f"Error in PUT cart: {str(e)}")
+            return Response(
+                {"error": "Failed to update cart"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def delete(self, request):
+        """Remove item from cart"""
+        try:
+            product_id = request.data.get('product_id')
+            if not product_id:
+                return Response(
+                    {"error": "Product ID is required"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            if request.user.is_authenticated:
+                cart = request.user.cart
+                if not cart:
+                    return Response(
+                        {"error": "Cart not found"},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+
+                CartItem.objects.filter(cart=cart, product_id=product_id).delete()
+                serializer = CartSerializer(cart)
+                return Response(serializer.data)
+            else:
+                # For anonymous users, update cookie
+                cart_data = self.get_cart_data(request)
+                cart_data.pop(str(product_id), None)
+                
+                response = Response(cart_data)
+                self.save_cart_cookie(response, cart_data)
+                return response
+
+        except Exception as e:
+            logger.error(f"Error in DELETE cart: {str(e)}")
+            return Response(
+                {"error": "Failed to remove item from cart"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

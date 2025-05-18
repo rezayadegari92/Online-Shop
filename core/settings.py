@@ -20,7 +20,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     # local apps
-    'accounts',
+    'accounts.apps.AccountsConfig',
     'products',
     'orders',
     'addresses',
@@ -43,6 +43,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'carts.middleware.CartMiddleware',
 ]
 
 ROOT_URLCONF = 'core.urls'
@@ -117,13 +118,14 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
+        'rest_framework.permissions.AllowAny',  # Allow anonymous access by default
     ],
     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    
+    'PAGE_SIZE': 10,  # Set default page size
 }
 
 SIMPLE_JWT = {
