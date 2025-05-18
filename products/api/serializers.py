@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from products.models import Category, Product, Comment, ProductImage, Brand, Rating
 from decimal import Decimal, ROUND_HALF_UP
+
 class Brandserializer(serializers.ModelSerializer):
     class Meta:
         model = Brand
