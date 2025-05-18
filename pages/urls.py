@@ -4,11 +4,13 @@ from .views import *
 urlpatterns = [
     path("home/",home, name="home"),
     path("products/",products, name="products"),
-    path("product_detail/",product_detail, name="product_detail"),
+    path("test/",test, name="product_detail"),
     path("categories/", categories, name="categories"),
     path("category_products/", category_products, name="category_products"),
     path("brands/", brands, name="brands"),
     path("brand_products/", brand_products, name="brand_products"),
     path("cart/", cart, name="cart"),
     path("top_rated/", top_rated, name="top_rated"),
+    path("dis/", discounts, name="top_rated"),
+
 ]
