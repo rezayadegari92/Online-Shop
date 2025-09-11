@@ -5,14 +5,24 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 
 
-from products.models import Category, Product, Comment, Rating
+from products.models import Category, Product, Comment, Rating, Brand
 from .serializers import (
     ProductSerializer, 
     ProductRatingSerializer, 
     CommentSerializer, 
     CategorySerializer
 )
-
+from .schemas import (
+    ProductSerializer as ProductSchemaSerializer,
+    ProductListQueryParameters,
+    ProductDetailPostRequestSerializer,
+    CategorySerializer as CategorySchemaSerializer,
+    CategoryProductsQueryParameters,
+    BrandSerializer as BrandSchemaSerializer,
+    BrandProductsQueryParameters,
+    CommentSerializer as CommentSchemaSerializer,
+    ProductRatingSerializer as ProductRatingSchemaSerializer
+)
 from django.db.models import Avg
 
 from rest_framework.views import APIView
@@ -21,7 +31,15 @@ from rest_framework import status
 from rest_framework.pagination import PageNumberPagination
 from django.db.models import Q
 from products.models import Product
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
 
+@extend_schema(
+    parameters=[ProductListQueryParameters],
+    responses={200: ProductSchemaSerializer(many=True)},
+    summary="List Products",
+    description="Retrieve a list of products with optional search and pagination.",
+    tags=['Products']
+)
 class ProductListView(APIView):
     permission_classes = [permissions.AllowAny]
     def get(self, request):
@@ -42,6 +60,21 @@ class ProductListView(APIView):
         return paginator.get_paginated_response(serializer.data)
 
 
+@extend_schema(
+    parameters=[OpenApiParameter(
+        name='pk',
+        type=int,
+        location=OpenApiParameter.PATH,
+        description='ID of the product to retrieve, comment on, or rate.'
+    )],
+    responses={
+        200: ProductSchemaSerializer,
+        404: {'description': 'Not Found'}
+    },
+    summary="Retrieve Product Details, Add Comment or Rating",
+    description="Retrieve a product by ID, or add a comment/rating to it.",
+    tags=['Products']
+)
 class ProductDetailView(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -59,6 +92,18 @@ class ProductDetailView(APIView):
         serializer = ProductSerializer(product, context={'request': request})
         return Response(serializer.data)
 
+    @extend_schema(
+        request=ProductDetailPostRequestSerializer,
+        responses={
+            201: CommentSchemaSerializer,
+            200: ProductRatingSchemaSerializer,
+            400: {'description': 'Bad Request'},
+            404: {'description': 'Not Found'}
+        },
+        summary="Add Comment or Rating to Discounted Product",
+        description="Add a comment or rating to a specific discounted product.",
+        tags=['Products']
+    )
     def post(self, request, pk):
         """Add comment or rating to a product."""
         try:
@@ -95,6 +140,12 @@ class ProductDetailView(APIView):
 
 
 
+@extend_schema(
+    responses={200: CategorySchemaSerializer(many=True)},
+    summary="List Categories",
+    description="Retrieve a list of product categories (only root categories with their children).",
+    tags=['Categories']
+)
 class CategoryListView(APIView):
     permission_classes = [permissions.AllowAny]
     def get(self, request):
@@ -103,7 +154,13 @@ class CategoryListView(APIView):
         return Response(serializer.data)
 
 
-
+@extend_schema(
+    parameters=[CategoryProductsQueryParameters],
+    responses={200: ProductSchemaSerializer(many=True)},
+    summary="List Products by Category",
+    description="Retrieve a list of products belonging to a specific category, with pagination.",
+    tags=['Categories']
+)
 class CategoryProductsView(APIView):
     permission_classes = [permissions.AllowAny]
     def get(self, request, pk):
@@ -119,6 +176,13 @@ class CategoryProductsView(APIView):
         serializer = ProductSerializer(paginated_products, many=True, context={'request': request})
         return paginator.get_paginated_response(serializer.data)
 
+@extend_schema(
+    parameters=[ProductListQueryParameters],
+    responses={200: ProductSchemaSerializer(many=True)},
+    summary="List Top Rated Products",
+    description="Retrieve a list of top-rated products with pagination.",
+    tags=['Products']
+)
 class TopRatedProductsView(APIView):
     permission_classes = [permissions.AllowAny]
     def get(self, request):
@@ -131,17 +195,28 @@ class TopRatedProductsView(APIView):
         serializer = ProductSerializer(paginated_products, many=True, context={'request': request})
         return paginator.get_paginated_response(serializer.data)
 
-from products.models import Brand
-from .serializers import Brandserializer
 
+@extend_schema(
+    responses={200: BrandSchemaSerializer(many=True)},
+    summary="List Brands",
+    description="Retrieve a list of all product brands.",
+    tags=['Brands']
+)
 class BrandListView(APIView):
     permission_classes = [permissions.AllowAny]
     def get(self, request):
         brands = Brand.objects.all()
-        serializer = Brandserializer(brands, many=True, context={'request': request})
+        serializer = BrandSchemaSerializer(brands, many=True, context={'request': request})
         return Response(serializer.data)
 
 
+@extend_schema(
+    parameters=[BrandProductsQueryParameters],
+    responses={200: ProductSchemaSerializer(many=True)},
+    summary="List Products by Brand",
+    description="Retrieve a list of products belonging to a specific brand, with pagination.",
+    tags=['Brands']
+)
 class BrandProductsView(APIView):
     permission_classes = [permissions.AllowAny]
     def get(self, request, pk):
@@ -158,6 +233,12 @@ class BrandProductsView(APIView):
         return paginator.get_paginated_response(serializer.data)
 
 
+@extend_schema(
+    responses={200: ProductSchemaSerializer(many=True)},
+    summary="List Discounted Products",
+    description="Retrieve a list of all products with a discount applied.",
+    tags=['Products']
+)
 class DiscountedProductList(APIView):
     permission_classes = [permissions.AllowAny]
     def get(self, request):
@@ -166,8 +247,21 @@ class DiscountedProductList(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-
-
+@extend_schema(
+    parameters=[OpenApiParameter(
+        name='pk',
+        type=int,
+        location=OpenApiParameter.PATH,
+        description='ID of the discounted product to retrieve.'
+    )],
+    responses={
+        200: ProductSchemaSerializer,
+        404: {'description': 'Not Found'}
+    },
+    summary="Retrieve Discounted Product Details",
+    description="Retrieve the details of a specific discounted product.",
+    tags=['Products']
+)
 class DiscountedProductDetailView(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -178,6 +272,18 @@ class DiscountedProductDetailView(APIView):
         serializer = ProductSerializer(products, context={'request': request})
         return Response(serializer.data)
 
+    @extend_schema(
+        request=ProductDetailPostRequestSerializer,
+        responses={
+            201: CommentSchemaSerializer,
+            200: ProductRatingSchemaSerializer,
+            400: {'description': 'Bad Request'},
+            404: {'description': 'Not Found'}
+        },
+        summary="Add Comment or Rating to Discounted Product",
+        description="Add a comment or rating to a specific discounted product.",
+        tags=['Products']
+    )
     def post(self, request, pk):
         product = get_object_or_404(Product, pk=pk, discount_percent__gt=0)
         action = request.data.get('action')

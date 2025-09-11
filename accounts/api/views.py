@@ -3,6 +3,18 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth import get_user_model
 from .serializers import CustomerSignupSerializer, LoginSerializer, VerifyOTPSerializer
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
+from .schemas import (
+    CustomerSignupRequestSerializer,
+    CustomerSignupResponseSerializer,
+    LoginRequestSerializer,
+    LoginResponseSerializer,
+    VerifyOTPRequestSerializer,
+    VerifyOTPResponseSerializer,
+    CustomerLogoutRequestSerializer,
+    CustomerLogoutResponseSerializer,
+    UserProfileSerializer
+)
 from accounts.models import OTP
 from datetime import datetime
 # from django.contrib.auth import login
@@ -13,6 +25,38 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from addresses.models import Address
 User = get_user_model()
 
+
+@extend_schema(
+    request=CustomerSignupRequestSerializer,
+    responses={
+        200: CustomerSignupResponseSerializer,
+        400: {'description': 'Bad Request'}
+    },
+    tags=['Authentication'],
+    summary="Customer Signup",
+    description="Register a new customer and send an OTP for verification.",
+    examples=[
+        OpenApiExample(
+            'Customer Signup Example',
+            value={
+                "email": "test@example.com",
+                "password": "password123",
+                "first_name": "John",
+                "last_name": "Doe",
+                "birth_date": "1990-01-01",
+                "address": {
+                    "street": "123 Main St",
+                    "city": "Anytown",
+                    "state": "CA",
+                    "zip_code": "90210",
+                    "phone_number": "555-123-4567"
+                }
+            },
+            request_only=True,
+            media_type='application/json',
+        )
+    ]
+)
 class CustomerSignupView(APIView):
     permission_classes = [permissions.AllowAny]
     def post(self, request):
@@ -37,6 +81,16 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 class LoginView(APIView):
     permission_classes = [permissions.AllowAny]
 
+    @extend_schema(
+        request=LoginRequestSerializer,
+        responses={
+            200: LoginResponseSerializer,
+            401: {'description': 'Unauthorized'}
+        },
+        tags=['Authentication'],
+        summary="Customer Login",
+        description="Authenticate a customer and return JWT tokens."
+    )
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         if serializer.is_valid():
@@ -56,6 +110,16 @@ class LoginView(APIView):
         return Response(serializer.errors, status=status.HTTP_401_UNAUTHORIZED)
 
 
+@extend_schema(
+    request=VerifyOTPRequestSerializer,
+    responses={
+        201: VerifyOTPResponseSerializer,
+        400: {'description': 'Bad Request'}
+    },
+    tags=['Authentication'],
+    summary="Verify OTP and Complete Signup",
+    description="Verify the OTP sent to the user's email and complete the registration process."
+)
 class VerifyOTPView(APIView):
     permission_classes = [permissions.AllowAny]
     def post(self, request):
@@ -112,6 +176,16 @@ class VerifyOTPView(APIView):
 
 
 
+@extend_schema(
+    request=CustomerLogoutRequestSerializer,
+    responses={
+        205: CustomerLogoutResponseSerializer,
+        400: {'description': 'Bad Request'}
+    },
+    tags=['Authentication'],
+    summary="Customer Logout",
+    description="Blacklist the refresh token to log out the user."
+)
 class CustomerLogoutView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -132,6 +206,12 @@ class ProfileAPIView(APIView):
     # permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
     
+    @extend_schema(
+        responses={200: UserProfileSerializer},
+        tags=['User Profile'],
+        summary="Get User Profile",
+        description="Retrieve the authenticated user's profile information."
+    )
     def get(self, request):
         try:
             user = request.user
@@ -140,6 +220,13 @@ class ProfileAPIView(APIView):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+    @extend_schema(
+        request=UserProfileSerializer,
+        responses={200: UserProfileSerializer},
+        tags=['User Profile'],
+        summary="Update User Profile",
+        description="Update the authenticated user's profile information."
+    )
     def patch(self, request):
         try:
             user = request.user

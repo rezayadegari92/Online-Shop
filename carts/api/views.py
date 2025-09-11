@@ -2,6 +2,16 @@
 from rest_framework import generics, permissions
 from carts.models import Cart, CartItem
 from .serializers import CartItemSerializer, CartItemCreateSerializer, ApplyDiscountSerializer, CartSerializer
+from .schemas import (
+    CartItemSerializer as CartItemSchemaSerializer,
+    CartItemCreateSerializer as CartItemCreateSchemaSerializer,
+    CartSerializer as CartSchemaSerializer,
+    ApplyDiscountRequestSerializer,
+    ApplyDiscountResponseSerializer,
+    CheckoutResponseSerializer,
+    CartDetailResponseSerializer,
+    CartItemUpdateDeleteRequestSerializer
+)
 from rest_framework.exceptions import ValidationError
 from decimal import Decimal
 from django.shortcuts import get_object_or_404
@@ -14,9 +24,56 @@ from django.utils import timezone
 import json
 from products.models import Product
 import logging
+from drf_spectacular.utils import extend_schema, OpenApiParameter
+
+
+class CartMixin(object):
+    def get_cart_data(self, request):
+        """Get cart data from either database or cookies"""
+        try:
+            if request.user.is_authenticated:
+                cart = request.user.cart
+                if not cart:
+                    cart = Cart.objects.create(user=request.user)
+                return cart
+            else:
+                # For anonymous users, get cart from cookie
+                cart_data = request.COOKIES.get('cart', '{}')
+                try:
+                    return json.loads(cart_data)
+                except json.JSONDecodeError:
+                    logger.warning("Invalid cart data in cookie")
+                    return {}
+        except Exception as e:
+            logger.error(f"Error getting cart data: {str(e)}")
+            return {}
+
+    def save_cart_cookie(self, response, cart_data):
+        """Save cart data to cookie"""
+        try:
+            response.set_cookie(
+                'cart',
+                json.dumps(cart_data),
+                max_age=30 * 24 * 60 * 60,  # 30 days
+                samesite='Lax',
+                secure=True
+            )
+        except Exception as e:
+            logger.error(f"Error saving cart cookie: {str(e)}")
 
 logger = logging.getLogger(__name__)
 
+@extend_schema(
+    request=CartItemCreateSchemaSerializer,
+    responses={
+        200: CartItemSchemaSerializer(many=True),
+        201: CartItemSchemaSerializer,
+        400: {'description': 'Bad Request'}
+    },
+    summary="List and Add Cart Items",
+    description="Retrieve a list of cart items or add a new item to the cart.",
+    tags=['Cart Items']
+)
 class CartItemListCreateView(generics.ListCreateAPIView):
     permission_classes = [permissions.AllowAny]
     authentication_classes = []  # Remove authentication requirement
@@ -40,6 +97,26 @@ class CartItemListCreateView(generics.ListCreateAPIView):
             raise ValidationError("این محصول قبلاً در سبد شما وجود دارد.")
         serializer.save(cart=cart)
 
+@extend_schema(
+    request=CartItemCreateSchemaSerializer,
+    responses={
+        200: CartItemSchemaSerializer,
+        204: {'description': 'No Content'},
+        400: {'description': 'Bad Request'},
+        404: {'description': 'Not Found'}
+    },
+    parameters=[
+        OpenApiParameter(
+            name='pk',
+            type=int,
+            location=OpenApiParameter.PATH,
+            description='ID of the cart item to retrieve, update or delete.'
+        )
+    ],
+    summary="Retrieve, Update or Delete Cart Item",
+    description="Retrieve, update, or delete a specific cart item by ID.",
+    tags=['Cart Items']
+)
 class CartItemUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.AllowAny]
     authentication_classes = []  # Remove authentication requirement
@@ -60,6 +137,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from .serializers import CartSerializer
 
+@extend_schema(
+    responses={200: CartSchemaSerializer},
+    summary="Retrieve Cart Details",
+    description="Retrieve the details of the current user's cart.",
+    tags=['Cart']
+)
 class CartRetrieveView(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -71,7 +154,17 @@ class CartRetrieveView(APIView):
 
 # cart/api/v1/views.py (ادامه)
 
-class ApplyDiscountView(APIView):
+@extend_schema(
+    request=ApplyDiscountRequestSerializer,
+    responses={
+        200: ApplyDiscountResponseSerializer,
+        400: {'description': 'Bad Request'}
+    },
+    summary="Apply Discount Code",
+    description="Apply a discount code to the user's cart.",
+    tags=['Cart']
+)
+class ApplyDiscountView(APIView, CartMixin):
     permission_classes = [permissions.AllowAny]
     authentication_classes = []  # Remove authentication requirement
 
@@ -87,26 +180,10 @@ class ApplyDiscountView(APIView):
             return Response({"detail": f"Discount code '{discount_code.code}' applied successfully."})
         else:
             # For anonymous users, store discount in cookie
-            cart_data = request.COOKIES.get('cart', '{}')
-            try:
-                cart_data = json.loads(cart_data)
-                cart_data['discount_code'] = discount_code.code
-                response = Response({"detail": f"Discount code '{discount_code.code}' applied successfully."})
-                return self.save_cart_cookie(response, cart_data)
-            except json.JSONDecodeError:
-                return Response({"error": "Invalid cart data"}, status=status.HTTP_400_BAD_REQUEST)
-
-    def save_cart_cookie(self, response, cart_data):
-        response.set_cookie(
-            'cart',
-            json.dumps(cart_data),
-            expires=timezone.now() + timezone.timedelta(days=7),
-            httponly=True,
-            samesite='Lax'
-        )
-        return response
-
-
+            cart_data = self.get_cart_data(request)
+            cart_data['discount_code'] = discount_code.code
+            response = Response({"detail": f"Discount code '{discount_code.code}' applied successfully."})
+            return self.save_cart_cookie(response, cart_data)
 
 
 
@@ -122,6 +199,15 @@ from addresses.models import Address
 from carts.models import Cart
 from orders.models import Order, OrderItem
 
+@extend_schema(
+    responses={
+        200: CheckoutResponseSerializer,
+        400: {'description': 'Bad Request'}
+    },
+    summary="Checkout",
+    description="Process the checkout for the authenticated user's cart, creating an order.",
+    tags=['Orders']
+)
 class CheckoutView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -174,43 +260,29 @@ class CheckoutView(APIView):
 
         return Response({"detail": "سفارش با موفقیت ثبت شد.", "order_id": order.id})
 
-class CartView(APIView):
+@extend_schema(
+    responses={
+        200: CartSchemaSerializer,
+        400: {'description': 'Bad Request'},
+        500: {'description': 'Internal Server Error'}
+    },
+    summary="Get Cart Contents",
+    description="Retrieve the contents of the user's cart (authenticated or anonymous).",
+    tags=['Cart']
+)
+class CartView(APIView, CartMixin):
     permission_classes = [permissions.AllowAny]
     authentication_classes = []  # Allow anonymous access
 
-    def get_cart_data(self, request):
-        """Get cart data from either database or cookies"""
-        try:
-            if request.user.is_authenticated:
-                cart = request.user.cart
-                if not cart:
-                    cart = Cart.objects.create(user=request.user)
-                return cart
-            else:
-                # For anonymous users, get cart from cookie
-                cart_data = request.COOKIES.get('cart', '{}')
-                try:
-                    return json.loads(cart_data)
-                except json.JSONDecodeError:
-                    logger.warning("Invalid cart data in cookie")
-                    return {}
-        except Exception as e:
-            logger.error(f"Error getting cart data: {str(e)}")
-            return {}
-
-    def save_cart_cookie(self, response, cart_data):
-        """Save cart data to cookie"""
-        try:
-            response.set_cookie(
-                'cart',
-                json.dumps(cart_data),
-                max_age=30 * 24 * 60 * 60,  # 30 days
-                samesite='Lax',
-                secure=True
-            )
-        except Exception as e:
-            logger.error(f"Error saving cart cookie: {str(e)}")
-
+    @extend_schema(
+        responses={
+            200: CartSchemaSerializer,
+            400: {'description': 'Bad Request'}
+        },
+        summary="Get Cart Content",
+        description="Retrieve the contents of the user's cart. For anonymous users, cart data is retrieved from cookies.",
+        tags=['Cart']
+    )
     def get(self, request):
         """Get cart contents"""
         try:
@@ -230,6 +302,18 @@ class CartView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+    @extend_schema(
+        request=CartItemCreateSchemaSerializer,
+        responses={
+            200: CartSchemaSerializer,
+            400: {'description': 'Bad Request'},
+            404: {'description': 'Not Found'},
+            500: {'description': 'Internal Server Error'}
+        },
+        summary="Add Item to Cart",
+        description="Add a product to the user's cart. For anonymous users, cart data is stored in cookies.",
+        tags=['Cart']
+    )
     def post(self, request):
         """Add item to cart"""
         try:
@@ -281,6 +365,18 @@ class CartView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+    @extend_schema(
+        request=CartItemUpdateDeleteRequestSerializer,
+        responses={
+            200: CartSchemaSerializer,
+            400: {'description': 'Bad Request'},
+            404: {'description': 'Not Found'},
+            500: {'description': 'Internal Server Error'}
+        },
+        summary="Update Item Quantity in Cart",
+        description="Update the quantity of a product in the user's cart, or remove it if quantity is 0. For anonymous users, cart data is stored in cookies.",
+        tags=['Cart']
+    )
     def put(self, request):
         """Update cart item quantity"""
         try:
@@ -333,6 +429,18 @@ class CartView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+    @extend_schema(
+        request=CartItemUpdateDeleteRequestSerializer,
+        responses={
+            200: CartSchemaSerializer,
+            400: {'description': 'Bad Request'},
+            404: {'description': 'Not Found'},
+            500: {'description': 'Internal Server Error'}
+        },
+        summary="Remove Item from Cart",
+        description="Remove a product from the user's cart. For anonymous users, cart data is stored in cookies.",
+        tags=['Cart']
+    )
     def delete(self, request):
         """Remove item from cart"""
         try:
