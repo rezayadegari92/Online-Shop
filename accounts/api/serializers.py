@@ -9,15 +9,28 @@ User = get_user_model()
 
 class CustomerSignupSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, validators=[validate_password])
-    username = serializers.CharField(required=True)
+    username = serializers.CharField(required=False, allow_blank=True)
     birth_date = serializers.DateField(required=True)
-    address = AddressSerializer()
+    address = AddressSerializer(required=False)
     
     class Meta:
         model = User
         fields = ["email", "username","first_name", "last_name", "password","birth_date", "address",]
 
         extra_kwargs = { 'address': {'required': False} }
+
+    def validate(self, attrs):
+        email = attrs.get("email")
+        username = attrs.get("username")
+        if not username and email:
+            base = email.split("@")[0]
+            candidate = base
+            idx = 1
+            while User.objects.filter(username=candidate).exists():
+                idx += 1
+                candidate = f"{base}{idx}"
+            attrs["username"] = candidate
+        return attrs
 
 
 
@@ -26,11 +39,14 @@ from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 
 class LoginSerializer(serializers.Serializer):
-    email_or_username = serializers.CharField()
+    email_or_username = serializers.CharField(required=False)
+    email = serializers.EmailField(required=False)
+    username = serializers.CharField(required=False)
     password = serializers.CharField(write_only=True)
 
     def validate(self, data):
-        email_or_username = data.get('email_or_username')
+        # Accept either email_or_username or separate email/username fields
+        email_or_username = data.get('email_or_username') or data.get('email') or data.get('username')
         password = data.get('password')
 
         

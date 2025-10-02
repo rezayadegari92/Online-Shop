@@ -8,6 +8,8 @@ class AddressSerializer(serializers.ModelSerializer):
         fields = ["id","state","city","street","postal_code","phone_number","is_default","country"]
         extra_kwargs = {
             'country': {'required': False, 'default': 'Iran'},
+            'postal_code': {'required': False},
+            'phone_number': {'required': False},
             'user': {'read_only': True}
         }
     def create(self, validated_data):

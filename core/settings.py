@@ -8,10 +8,9 @@ SECRET_KEY = 'django-insecure-u=fu0qz87^zgchrjaug-1(0l9@!b^1sykjs)s13^nk&&2-&pty
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
+ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
-    'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -32,7 +31,6 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'django_filters',
-    'django_celery_beat',
 ]
 
 MIDDLEWARE = [
@@ -68,8 +66,12 @@ WSGI_APPLICATION = 'core.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('POSTGRES_DB', 'onlineshop'),
+        'USER': os.getenv('POSTGRES_USER', 'onlineshop'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'onlineshop'),
+        'HOST': os.getenv('POSTGRES_HOST', 'db'),
+        'PORT': int(os.getenv('POSTGRES_PORT', '5432')),
     }
 }
 
@@ -134,6 +136,9 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'API for an online shop built with Django Rest Framework',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
+    'AUTHENTICATION_SCHEMES': [
+        'drf_spectacular.contrib.rest_framework_simplejwt.SimpleJWTScheme',
+    ],
 }
 
 SIMPLE_JWT = {
@@ -145,7 +150,7 @@ SIMPLE_JWT = {
 }
 
 # 🐇 Celery
-CELERY_BROKER_URL = "redis://localhost:6379/0"
-CELERY_RESULT_BACKEND = "redis://localhost:6379/0"
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", CELERY_BROKER_URL)
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"

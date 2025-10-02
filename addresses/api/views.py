@@ -63,14 +63,6 @@ from rest_framework.permissions import IsAuthenticated
         404: {'description': 'Not Found'},
         401: {'description': 'Unauthorized'}
     },
-    parameters=[
-        OpenApiParameter(
-            name='pk',
-            type=int,
-            location=OpenApiParameter.PATH,
-            description='ID of the address to set as default.'
-        )
-    ],
     summary="Set Default Address",
     description="Set a specific address as the default address for the authenticated user.",
     tags=['Addresses']

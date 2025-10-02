@@ -1,26 +1,19 @@
 
 from drf_spectacular.utils import OpenApiExample, OpenApiParameter, extend_schema
 from rest_framework import serializers
+from .serializers import CustomerSignupSerializer, LoginSerializer, VerifyOTPSerializer, UserProfileSerializer as RealUserProfileSerializer
 
 
-class CustomerSignupRequestSerializer(serializers.Serializer):
-    email = serializers.EmailField()
-    password = serializers.CharField()
-    first_name = serializers.CharField()
-    last_name = serializers.CharField()
-    phone_number = serializers.CharField(required=False)
-    birth_date = serializers.DateField()
-    address = serializers.JSONField(required=False, help_text="Address details as a JSON object")
+class CustomerSignupRequestSerializer(CustomerSignupSerializer):
+    pass
 
 class CustomerSignupResponseSerializer(serializers.Serializer):
     message = serializers.CharField()
     email = serializers.EmailField()
 
 
-class LoginRequestSerializer(serializers.Serializer):
-    email = serializers.EmailField(required=False)
-    username = serializers.CharField(required=False)
-    password = serializers.CharField()
+class LoginRequestSerializer(LoginSerializer):
+    pass
 
 class LoginResponseSerializer(serializers.Serializer):
     message = serializers.CharField()
@@ -31,9 +24,8 @@ class LoginResponseSerializer(serializers.Serializer):
     user_type = serializers.CharField()
 
 
-class VerifyOTPRequestSerializer(serializers.Serializer):
-    email = serializers.EmailField()
-    otp_code = serializers.CharField()
+class VerifyOTPRequestSerializer(VerifyOTPSerializer):
+    pass
 
 class VerifyOTPResponseSerializer(serializers.Serializer):
     message = serializers.CharField()
@@ -51,10 +43,5 @@ class CustomerLogoutResponseSerializer(serializers.Serializer):
     message = serializers.CharField()
 
 
-class UserProfileSerializer(serializers.Serializer):
-    email = serializers.EmailField(read_only=True)
-    first_name = serializers.CharField(required=False)
-    last_name = serializers.CharField(required=False)
-    phone_number = serializers.CharField(required=False)
-    birth_date = serializers.DateField(required=False)
-    user_type = serializers.CharField(read_only=True)
+class UserProfileSerializer(RealUserProfileSerializer):
+    pass

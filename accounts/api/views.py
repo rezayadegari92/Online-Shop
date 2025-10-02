@@ -48,8 +48,8 @@ User = get_user_model()
                     "street": "123 Main St",
                     "city": "Anytown",
                     "state": "CA",
-                    "zip_code": "90210",
-                    "phone_number": "555-123-4567"
+                    "postal_code": "90210",
+                    "phone_number": "+989123456789"
                 }
             },
             request_only=True,
