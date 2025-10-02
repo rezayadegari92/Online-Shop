@@ -16,10 +16,11 @@ from rest_framework.exceptions import ValidationError
 from decimal import Decimal
 from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
+from django.conf import settings
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework.authentication import SessionAuthentication
+# from rest_framework.authentication import SessionAuthentication
 from django.utils import timezone
 import json
 from products.models import Product
@@ -56,7 +57,7 @@ class CartMixin(object):
                 json.dumps(cart_data),
                 max_age=30 * 24 * 60 * 60,  # 30 days
                 samesite='Lax',
-                secure=True
+                secure=not settings.DEBUG
             )
         except Exception as e:
             logger.error(f"Error saving cart cookie: {str(e)}")
@@ -76,7 +77,7 @@ logger = logging.getLogger(__name__)
 )
 class CartItemListCreateView(generics.ListCreateAPIView):
     permission_classes = [permissions.AllowAny]
-    authentication_classes = []  # Remove authentication requirement
+    authentication_classes = [JWTAuthentication]
 
     def get_serializer_class(self):
         if self.request.method == 'POST':
@@ -89,13 +90,35 @@ class CartItemListCreateView(generics.ListCreateAPIView):
             return cart.items.all()
         return CartItem.objects.none()
 
-    def perform_create(self, serializer):
-        cart, _ = Cart.objects.get_or_create(user=self.request.user)
+    def create(self, request, *args, **kwargs):
+        # For anonymous users, redirect to main cart endpoint
+        if not request.user.is_authenticated:
+            return Response(
+                {"detail": "Please use /api/cart/ endpoint for cart operations."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        cart, _ = Cart.objects.get_or_create(user=request.user)
         product = serializer.validated_data['product']
-        existing_item = cart.items.filter(product=product).first()
-        if existing_item:
-            raise ValidationError("این محصول قبلاً در سبد شما وجود دارد.")
-        serializer.save(cart=cart)
+        quantity = serializer.validated_data.get('quantity', 1)
+        
+        # Check if item already exists
+        cart_item, created = CartItem.objects.get_or_create(
+            cart=cart,
+            product=product,
+            defaults={'quantity': quantity}
+        )
+        
+        if not created:
+            cart_item.quantity += quantity
+            cart_item.save()
+        
+        # Return the full cart
+        cart_serializer = CartSerializer(cart, context={'request': request})
+        return Response(cart_serializer.data, status=status.HTTP_201_CREATED)
 
 @extend_schema(
     request=CartItemCreateSchemaSerializer,
@@ -118,8 +141,8 @@ class CartItemListCreateView(generics.ListCreateAPIView):
     tags=['Cart Items']
 )
 class CartItemUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [permissions.AllowAny]
-    authentication_classes = []  # Remove authentication requirement
+    permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
     queryset = CartItem.objects.all()
     serializer_class = CartItemSerializer
 
@@ -128,6 +151,17 @@ class CartItemUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
             cart, _ = Cart.objects.get_or_create(user=self.request.user)
             return cart.items.all()
         return CartItem.objects.none()
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        cart = instance.cart
+        self.perform_destroy(instance)
+        
+        # If cart is empty, optionally delete it
+        if not cart.items.exists():
+            cart.delete()
+        
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 
@@ -166,7 +200,7 @@ class CartRetrieveView(APIView):
 )
 class ApplyDiscountView(APIView, CartMixin):
     permission_classes = [permissions.AllowAny]
-    authentication_classes = []  # Remove authentication requirement
+    authentication_classes = [JWTAuthentication]  # Support JWT for authenticated users
 
     def post(self, request):
         serializer = ApplyDiscountSerializer(data=request.data)
@@ -210,15 +244,22 @@ from orders.models import Order, OrderItem
 )
 class CheckoutView(APIView):
     permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
 
     def post(self, request):
+        if not request.user.is_authenticated:
+            return Response(
+                {"detail": "Please login to checkout your cart."},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
         user = request.user
 
         # آدرس پیش‌فرض
         try:
             address = Address.objects.get(user=user, is_default=True)
         except Address.DoesNotExist:
-            return Response({"detail": "هیچ آدرس پیش‌فرضی ثبت نشده!"}, status=400)
+            return Response({"detail": "No default address found. Please add an address."}, status=status.HTTP_400_BAD_REQUEST)
 
         # بررسی سبد خرید
         try:
@@ -272,7 +313,7 @@ class CheckoutView(APIView):
 )
 class CartView(APIView, CartMixin):
     permission_classes = [permissions.AllowAny]
-    authentication_classes = []  # Allow anonymous access
+    authentication_classes = [JWTAuthentication]  # Support JWT for authenticated users
 
     @extend_schema(
         responses={
@@ -288,7 +329,7 @@ class CartView(APIView, CartMixin):
         try:
             cart_data = self.get_cart_data(request)
             if request.user.is_authenticated:
-                serializer = CartSerializer(cart_data)
+                serializer = CartSerializer(cart_data, context={'request': request})
                 return Response(serializer.data)
             else:
                 # For anonymous users, return cart data from cookie
@@ -347,7 +388,7 @@ class CartView(APIView, CartMixin):
                     cart_item.quantity += quantity
                     cart_item.save()
 
-                serializer = CartSerializer(cart)
+                serializer = CartSerializer(cart, context={'request': request})
                 return Response(serializer.data)
             else:
                 # For anonymous users, update cookie
@@ -408,7 +449,7 @@ class CartView(APIView, CartMixin):
                         status=status.HTTP_404_NOT_FOUND
                     )
 
-                serializer = CartSerializer(cart)
+                serializer = CartSerializer(cart, context={'request': request})
                 return Response(serializer.data)
             else:
                 # For anonymous users, update cookie
@@ -460,7 +501,7 @@ class CartView(APIView, CartMixin):
                     )
 
                 CartItem.objects.filter(cart=cart, product_id=product_id).delete()
-                serializer = CartSerializer(cart)
+                serializer = CartSerializer(cart, context={'request': request})
                 return Response(serializer.data)
             else:
                 # For anonymous users, update cookie

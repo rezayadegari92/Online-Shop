@@ -5,9 +5,18 @@ from products.models import Product
 from decimal import Decimal
 
 class ProductSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+    
     class Meta:
         model = Product
-        fields = ['id', 'name', 'price', 'discounted_price', 'image']
+        fields = ['id', 'name', 'price', 'discounted_price', 'image_url']
+    
+    def get_image_url(self, obj):
+        if obj.images.exists():
+            first_image = obj.images.first()
+            # Return relative URL to work with nginx proxy
+            return first_image.image.url
+        return None
 
 class CartItemSerializer(serializers.ModelSerializer):
     product = ProductSerializer(read_only=True)
@@ -24,15 +33,29 @@ class CartItemSerializer(serializers.ModelSerializer):
         return obj.quantity * obj.product.discounted_price
 
 class CartItemCreateSerializer(serializers.Serializer):
-    product_id = serializers.IntegerField()
-    quantity = serializers.IntegerField(min_value=1)
+    product_id = serializers.IntegerField(required=False)
+    product = serializers.PrimaryKeyRelatedField(
+        queryset=Product.objects.all(),
+        required=False,
+        write_only=True
+    )
+    quantity = serializers.IntegerField(min_value=1, default=1)
 
-    def validate_product_id(self, value):
-        try:
-            Product.objects.get(id=value)
-            return value
-        except Product.DoesNotExist:
-            raise serializers.ValidationError("Product does not exist")
+    def validate(self, attrs):
+        # Accept either product_id or product
+        product_id = attrs.get('product_id')
+        product = attrs.get('product')
+        
+        if not product_id and not product:
+            raise serializers.ValidationError("Either product_id or product is required")
+        
+        if product_id and not product:
+            try:
+                attrs['product'] = Product.objects.get(id=product_id)
+            except Product.DoesNotExist:
+                raise serializers.ValidationError({"product_id": "Product does not exist"})
+        
+        return attrs
 
     def validate_quantity(self, value):
         if value < 1:

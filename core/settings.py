@@ -120,7 +120,6 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',  # Allow anonymous access by default
@@ -136,9 +135,23 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'API for an online shop built with Django Rest Framework',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
-    'AUTHENTICATION_SCHEMES': [
-        'drf_spectacular.contrib.rest_framework_simplejwt.SimpleJWTScheme',
-    ],
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SECURITY': [{'jwtAuth': []}],
+    'APPEND_COMPONENTS': {
+        'securitySchemes': {
+            'jwtAuth': {
+                'type': 'http',
+                'scheme': 'bearer',
+                'bearerFormat': 'JWT',
+                'description': 'Enter your JWT access token (without Bearer prefix)'
+            }
+        }
+    },
+    'PREPROCESSING_HOOKS': ['drf_spectacular.hooks.preprocess_exclude_path_format'],
+    'POSTPROCESSING_HOOKS': [],
+    'SWAGGER_UI_SETTINGS': {
+        'persistAuthorization': True,
+    },
 }
 
 SIMPLE_JWT = {

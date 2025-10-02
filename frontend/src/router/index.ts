@@ -2,12 +2,14 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth.store'
 
 const routes = [
-  { path: '/', redirect: '/products' },
+  { path: '/', component: () => import('../views/HomeView.vue') },
   { path: '/products', component: () => import('../views/ProductsView.vue') },
+  { path: '/products/:id', component: () => import('../views/ProductDetailView.vue') },
   { path: '/login', component: () => import('../views/LoginView.vue') },
   { path: '/signup', component: () => import('../views/SignupView.vue') },
   { path: '/verify-otp', component: () => import('../views/VerifyOtpView.vue') },
   { path: '/profile', component: () => import('../views/ProfileView.vue'), meta: { requiresAuth: true } },
+  { path: '/orders', component: () => import('../views/OrdersView.vue'), meta: { requiresAuth: true } },
 ]
 
 const router = createRouter({

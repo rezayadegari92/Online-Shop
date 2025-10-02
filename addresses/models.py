@@ -29,6 +29,7 @@ class Address(models.Model):
 
     class Meta:
         verbose_name_plural = "Addresses"
+        ordering = ['-is_default', '-id']
 
     def __str__(self):
         return f"{self.street}, {self.city}, {self.country}"

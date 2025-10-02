@@ -18,7 +18,8 @@ class ProductImageSerializer(serializers.ModelSerializer):
     def get_image_url(self, obj):
         request = self.context.get("request")
         if request is not None:
-            return request.build_absolute_uri(obj.image.url)
+            # Use relative URL to work with nginx proxy
+            return obj.image.url
         return obj.image.url    
 
 class CommentSerializer(serializers.ModelSerializer):

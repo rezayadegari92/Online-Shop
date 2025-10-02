@@ -28,7 +28,13 @@ class User(AbstractBaseUser, PermissionsMixin):
     objects = UserManager()
 
     USERNAME_FIELD = 'username'
-    REQUIRED_FIELDS = [] 
+    REQUIRED_FIELDS = []
+    
+    @property
+    def cart(self):
+        from carts.models import Cart
+        cart, _ = Cart.objects.get_or_create(user=self)
+        return cart 
 
     def save(self, *args, **kwargs):
         
