@@ -3,7 +3,7 @@
     <router-link :to="`/products/${product.id}`" class="block">
       <div class="relative overflow-hidden bg-gray-100">
         <img 
-          :src="product.image || product.images?.[0]?.image_url || placeholder" 
+          :src="getImage()" 
           class="w-full h-56 object-cover group-hover:scale-110 transition-transform duration-300" 
           :alt="product.name"
         />
@@ -21,11 +21,11 @@
           <span>★</span>
           <span>{{ product.average_rating || product.avg_rating || 'N/A' }}</span>
         </div>
-        <p v-if="product.brand" class="text-xs text-gray-500 mt-1">{{ product.brand.name || product.brand }}</p>
+        <p v-if="product.brand" class="text-xs text-gray-500 mt-1">{{ getBrandName() }}</p>
       </div>
     </router-link>
     <div class="p-4 pt-0">
-      <button class="w-full btn" @click.prevent="$emit('add-to-cart', product.id)">
+      <button class="w-full btn" @click.prevent="handleAddToCart">
         Add to Cart
       </button>
     </div>
@@ -37,11 +37,25 @@ const props = defineProps<{
   product: any
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   'add-to-cart': [productId: number]
 }>()
 
 const placeholder = 'https://placehold.co/600x400?text=No+Image'
+
+function getImage() {
+  if (props.product.image) return props.product.image
+  if (props.product.images && props.product.images.length > 0) {
+    return props.product.images[0].image_url
+  }
+  return placeholder
+}
+
+function getBrandName() {
+  if (typeof props.product.brand === 'string') return props.product.brand
+  if (props.product.brand && props.product.brand.name) return props.product.brand.name
+  return ''
+}
 
 function currency(v: string | number) {
   const n = typeof v === 'number' ? v : parseFloat(v as string)
@@ -52,6 +66,10 @@ function currency(v: string | number) {
     maximumFractionDigits: 0
   }).format(n)
 }
+
+function handleAddToCart() {
+  emit('add-to-cart', props.product.id)
+}
 </script>
 
 <style scoped>
@@ -59,4 +77,3 @@ function currency(v: string | number) {
   @apply bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg px-4 py-2 hover:from-blue-700 hover:to-blue-800 transition font-semibold shadow-sm hover:shadow-md;
 }
 </style>
-

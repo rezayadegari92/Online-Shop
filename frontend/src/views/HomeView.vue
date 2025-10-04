@@ -155,7 +155,11 @@ onMounted(async () => {
 async function loadCategories() {
   try {
     const { data } = await api.get('/api/categories/')
-    categories.value = data.slice(0, 8)
+    const items = Array.isArray(data) ? data : (data.results || [])
+    categories.value = items.slice(0, 8)
+  } catch (e) {
+    console.error('Failed to load categories:', e)
+    categories.value = []
   } finally {
     loadingCategories.value = false
   }
@@ -164,7 +168,11 @@ async function loadCategories() {
 async function loadBrands() {
   try {
     const { data } = await api.get('/api/brands/')
-    brands.value = data.slice(0, 10)
+    const items = Array.isArray(data) ? data : (data.results || [])
+    brands.value = items.slice(0, 10)
+  } catch (e) {
+    console.error('Failed to load brands:', e)
+    brands.value = []
   } finally {
     loadingBrands.value = false
   }
@@ -173,7 +181,11 @@ async function loadBrands() {
 async function loadDiscountedProducts() {
   try {
     const { data } = await api.get('/api/discounted-products/')
-    discountedProducts.value = data
+    const items = Array.isArray(data) ? data : (data.results || [])
+    discountedProducts.value = items
+  } catch (e) {
+    console.error('Failed to load discounted products:', e)
+    discountedProducts.value = []
   } finally {
     loadingDiscounted.value = false
   }
@@ -182,7 +194,11 @@ async function loadDiscountedProducts() {
 async function loadTopRatedProducts() {
   try {
     const { data } = await api.get('/api/products/top-rated/')
-    topRatedProducts.value = data
+    const items = Array.isArray(data) ? data : (data.results || [])
+    topRatedProducts.value = items
+  } catch (e) {
+    console.error('Failed to load top rated products:', e)
+    topRatedProducts.value = []
   } finally {
     loadingTopRated.value = false
   }
@@ -191,7 +207,11 @@ async function loadTopRatedProducts() {
 async function loadAllProducts() {
   try {
     const { data } = await api.get('/api/products/')
-    allProducts.value = data.results || data
+    const items = Array.isArray(data) ? data : (data.results || [])
+    allProducts.value = items
+  } catch (e) {
+    console.error('Failed to load products:', e)
+    allProducts.value = []
   } finally {
     loadingProducts.value = false
   }

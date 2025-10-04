@@ -43,10 +43,31 @@ export const useAuthStore = defineStore('auth', {
       localStorage.setItem(REFRESH_KEY, tokens.refresh)
     },
     async login(payload: { email_or_username?: string; email?: string; username?: string; password: string }) {
+      // Get anonymous cart before login
+      const { useCartStore } = await import('./cart.store')
+      const cartStore = useCartStore()
+      const anonymousCart = [...cartStore.items]
+      
       const { data } = await api.post('/accounts/api/login/', payload)
       this.setTokens({ access: data.access, refresh: data.refresh })
       const profile = await api.get('/accounts/api/profile/')
       this.user = profile.data
+      
+      // Merge anonymous cart with user cart
+      if (anonymousCart.length > 0) {
+        for (const item of anonymousCart) {
+          try {
+            await api.post('/api/cart/', { 
+              product_id: item.product_id, 
+              quantity: item.quantity 
+            })
+          } catch (e) {
+            console.error('Failed to merge cart item:', e)
+          }
+        }
+        // Reload cart after merging
+        await cartStore.load()
+      }
     },
     async logout() {
       try {

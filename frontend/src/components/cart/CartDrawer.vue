@@ -61,20 +61,10 @@ function onQty(product_id: number, e: Event) {
   if (value > 0) cart.update(product_id, value)
 }
 
-async function checkout() {
-  try {
-    const result = await cart.checkout()
-    cart.toggle(false)
-    // Redirect to orders page
-    window.location.href = '/orders'
-  } catch (e: any) {
-    if (e.response?.status === 401) {
-      alert('Please log in to checkout')
-      window.location.href = '/login'
-    } else {
-      alert(e.response?.data?.detail || 'Checkout failed. Please ensure you have a default address.')
-    }
-  }
+function checkout() {
+  cart.toggle(false)
+  // Redirect to checkout page
+  window.location.href = '/checkout'
 }
 </script>
 
