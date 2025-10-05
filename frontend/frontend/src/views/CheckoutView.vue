@@ -62,7 +62,6 @@
             <input class="input" v-model="addressForm.state" placeholder="State" required />
             <input class="input" v-model="addressForm.postal_code" placeholder="Postal Code" />
             <input class="input" v-model="addressForm.phone_number" placeholder="Phone (+989... or 09...)" required />
-            <input class="input" v-model="addressForm.country" placeholder="Country" required />
             <button type="submit" class="btn col-span-2">Save Address</button>
           </form>
 
@@ -181,8 +180,7 @@ const addressForm = reactive({
   city: '',
   state: '',
   postal_code: '',
-  phone_number: '',
-  country: 'Iran'
+  phone_number: ''
 })
 
 const editForm = reactive({
@@ -233,11 +231,11 @@ async function loadAddresses() {
 async function createAddress() {
   try {
     await api.post('/api/addresses/', addressForm)
-    Object.assign(addressForm, { street: '', city: '', state: '', postal_code: '', phone_number: '', country: 'Iran' })
+    Object.assign(addressForm, { street: '', city: '', state: '', postal_code: '', phone_number: '' })
     showAddressForm.value = false
     await loadAddresses()
   } catch (e: any) {
-    alert(e.response?.data?.detail || e.response?.data?.phone_number?.[0] || 'Failed to create address')
+    alert(e.response?.data?.detail || 'Failed to create address')
   }
 }
 
@@ -304,8 +302,6 @@ async function completeCheckout() {
   processing.value = true
   try {
     const { data } = await api.post('/api/cart/checkout/')
-    // Clear the cart after successful checkout
-    await cart.load()
     alert('Order placed successfully!')
     router.push('/orders')
   } catch (e: any) {

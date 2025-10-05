@@ -1,0 +1,63 @@
+services:
+  frontend:
+    container_name: onlineshop_frontend
+    build: ../frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - web
+  web:
+    container_name: onlineshop_web
+    build: .
+    image: onlineshop:latest
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+      - media_volume:/app/media
+    ports:
+      - "8000:8000"
+    environment:
+      - DJANGO_SETTINGS_MODULE=core.settings
+      - DEBUG=1
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - ALLOWED_HOSTS=*
+    depends_on:
+      - redis
+      - db
+
+  celery:
+    container_name: onlineshop_celery
+    image: onlineshop:latest
+    command: celery -A core.celery_config.celery_app worker --loglevel=info
+    volumes:
+      - .:/app
+    environment:
+      - DJANGO_SETTINGS_MODULE=core.settings
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - redis
+      - web
+
+  redis:
+    container_name: onlineshop_redis
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  db:
+    container_name: onlineshop_db
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_DB=onlineshop
+      - POSTGRES_USER=onlineshop
+      - POSTGRES_PASSWORD=onlineshop
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  media_volume:
+  pgdata:
