@@ -16,7 +16,7 @@
           Your cart is empty
         </div>
         <div v-for="it in cart.items" :key="it.product_id" class="flex gap-4 p-4 border rounded-lg hover:shadow-md transition">
-          <img :src="it.image || placeholder" class="w-20 h-20 object-cover rounded" />
+          <img :src="it.image || placeholder" class="w-20 h-20 object-contain rounded bg-gray-100 p-1" />
           <div class="flex-1">
             <div class="font-semibold">{{ it.name }}</div>
             <div class="text-gray-600 text-sm">{{ currency(it.price) }}</div>

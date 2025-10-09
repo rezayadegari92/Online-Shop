@@ -43,7 +43,7 @@ export const useCartStore = defineStore('cart', {
                   quantity: data[pid],
                   name: product.name,
                   price: product.discounted_price ?? product.price,
-                  image: product.images?.[0]?.image_url || product.image
+                  image: product.images?.[0]?.image_url
                 }
               } catch (e) {
                 console.error(`Failed to fetch product ${pid}:`, e)

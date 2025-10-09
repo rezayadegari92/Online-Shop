@@ -54,17 +54,26 @@ function currency(v: string | number) {
 async function loadProducts() {
   loading.value = true
   try {
-    const params = new URLSearchParams()
+    let url = '/api/products/'
     
-    if (route.query.search) params.append('search', route.query.search as string)
-    if (route.query.category) params.append('category', route.query.category as string)
-    if (route.query.brand) params.append('brand', route.query.brand as string)
-    
-    const queryString = params.toString()
-    const url = queryString ? `/api/products/?${queryString}` : '/api/products/'
-    
-    const { data } = await api.get(url)
-    products.value = data.results || data
+    // If brand filter is applied, use the brand-specific endpoint
+    if (route.query.brand) {
+      url = `/api/brands/${route.query.brand}/products/`
+      const { data } = await api.get(url)
+      products.value = data.results || data
+    } else {
+      // Otherwise use the regular products endpoint with filters
+      const params = new URLSearchParams()
+      
+      if (route.query.search) params.append('search', route.query.search as string)
+      if (route.query.category) params.append('category', route.query.category as string)
+      
+      const queryString = params.toString()
+      url = queryString ? `/api/products/?${queryString}` : '/api/products/'
+      
+      const { data } = await api.get(url)
+      products.value = data.results || data
+    }
   } finally {
     loading.value = false
   }
