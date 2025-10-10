@@ -29,9 +29,25 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.pagination import PageNumberPagination
+from django.conf import settings
 from django.db.models import Q
 from products.models import Product
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
+
+class CustomPageNumberPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+    
+    def get_page_size(self, request):
+        if self.page_size_query_param:
+            try:
+                page_size = int(request.query_params[self.page_size_query_param])
+                if page_size > 0:
+                    return min(page_size, self.max_page_size)
+            except (KeyError, ValueError):
+                pass
+        return self.page_size
 
 @extend_schema(
     parameters=[ProductListQueryParameters],
@@ -43,18 +59,53 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExampl
 class ProductListView(APIView):
     permission_classes = [permissions.AllowAny]
     def get(self, request):
-        query = request.GET.get('search', '')
-        products = Product.objects.all().order_by('id')
+        # Get query parameters
+        search_query = request.GET.get('search', '')
+        category_id = request.GET.get('category')
+        brand_id = request.GET.get('brand')
+        sort_by = request.GET.get('sort', 'id')
+        
+        # Start with all products
+        products = Product.objects.select_related('brand', 'category').all()
 
-        if query:
+        # Apply search filter
+        if search_query:
             products = products.filter(
-                Q(name__icontains=query) |
-                Q(brand__name__icontains=query) |
-                Q(category__name__icontains=query)
+                Q(name__icontains=search_query) |
+                Q(brand__name__icontains=search_query) |
+                Q(category__name__icontains=search_query) |
+                Q(details__icontains=search_query)
             )
 
-        paginator = PageNumberPagination()
-        paginator.page_size = 10  # مثلا 10 محصول در هر صفحه
+        # Apply category filter
+        if category_id:
+            try:
+                products = products.filter(category_id=category_id)
+            except ValueError:
+                return Response({'detail': 'Invalid category ID.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Apply brand filter
+        if brand_id:
+            try:
+                products = products.filter(brand_id=brand_id)
+            except ValueError:
+                return Response({'detail': 'Invalid brand ID.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Apply sorting
+        if sort_by == 'name':
+            products = products.order_by('name')
+        elif sort_by == 'price':
+            products = products.order_by('price')
+        elif sort_by == '-price':
+            products = products.order_by('-price')
+        elif sort_by == 'rating':
+            # Use database aggregation for proper sorting with pagination
+            products = products.annotate(avg_rating=Avg('ratings__value')).order_by('-avg_rating', 'id')
+        else:
+            products = products.order_by('id')
+
+        # Apply pagination
+        paginator = CustomPageNumberPagination()
         paginated_products = paginator.paginate_queryset(products, request)
         serializer = ProductSerializer(paginated_products, many=True, context={'request': request})
         return paginator.get_paginated_response(serializer.data)
@@ -169,9 +220,8 @@ class CategoryProductsView(APIView):
         except Category.DoesNotExist:
             return Response({'detail': 'Category not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        products = category.products.all()
-        paginator = PageNumberPagination()
-        paginator.page_size = 10
+        products = category.products.select_related('brand', 'category').all().order_by('id')
+        paginator = CustomPageNumberPagination()
         paginated_products = paginator.paginate_queryset(products, request)
         serializer = ProductSerializer(paginated_products, many=True, context={'request': request})
         return paginator.get_paginated_response(serializer.data)
@@ -186,12 +236,13 @@ class CategoryProductsView(APIView):
 class TopRatedProductsView(APIView):
     permission_classes = [permissions.AllowAny]
     def get(self, request):
-        products = Product.objects.all()
-        sorted_products = sorted(products, key=lambda p: p.average_rating(), reverse=True)
+        # Use database aggregation for proper sorting with pagination
+        products = Product.objects.select_related('brand', 'category').annotate(
+            avg_rating=Avg('ratings__value')
+        ).order_by('-avg_rating', 'id')
 
-        paginator = PageNumberPagination()
-        paginator.page_size = 10
-        paginated_products = paginator.paginate_queryset(sorted_products, request)
+        paginator = CustomPageNumberPagination()
+        paginated_products = paginator.paginate_queryset(products, request)
         serializer = ProductSerializer(paginated_products, many=True, context={'request': request})
         return paginator.get_paginated_response(serializer.data)
 
@@ -225,26 +276,31 @@ class BrandProductsView(APIView):
         except Brand.DoesNotExist:
             return Response({'detail': 'Brand not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        products = brand.products.all()
-        paginator = PageNumberPagination()
-        paginator.page_size = 10
+        products = brand.products.select_related('brand', 'category').all().order_by('id')
+        paginator = CustomPageNumberPagination()
         paginated_products = paginator.paginate_queryset(products, request)
         serializer = ProductSerializer(paginated_products, many=True, context={'request': request})
         return paginator.get_paginated_response(serializer.data)
 
 
 @extend_schema(
+    parameters=[ProductListQueryParameters],
     responses={200: ProductSchemaSerializer(many=True)},
     summary="List Discounted Products",
-    description="Retrieve a list of all products with a discount applied.",
+    description="Retrieve a list of all products with a discount applied, with pagination.",
     tags=['Products']
 )
 class DiscountedProductList(APIView):
     permission_classes = [permissions.AllowAny]
     def get(self, request):
-        products = Product.objects.exclude(discount_percent=0)
-        serializer = ProductSerializer(products, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        products = Product.objects.select_related('brand', 'category').exclude(
+            discount_percent=0
+        ).order_by('-discount_percent', 'id')
+        
+        paginator = CustomPageNumberPagination()
+        paginated_products = paginator.paginate_queryset(products, request)
+        serializer = ProductSerializer(paginated_products, many=True, context={'request': request})
+        return paginator.get_paginated_response(serializer.data)
 
 
 @extend_schema(

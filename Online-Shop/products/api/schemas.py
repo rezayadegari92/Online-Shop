@@ -55,9 +55,16 @@ class ProductRatingSerializer(serializers.Serializer):
 
 
 class ProductListQueryParameters(serializers.Serializer):
-    search = serializers.CharField(required=False, help_text="Search query for products (name, brand, category)")
+    search = serializers.CharField(required=False, help_text="Search query for products (name, brand, category, details)")
+    category = serializers.IntegerField(required=False, help_text="Filter by category ID")
+    brand = serializers.IntegerField(required=False, help_text="Filter by brand ID")
+    sort = serializers.ChoiceField(
+        choices=['id', 'name', 'price', '-price', 'rating'], 
+        required=False, 
+        help_text="Sort products by: id, name, price, -price (descending), rating"
+    )
     page = serializers.IntegerField(required=False, help_text="Page number for pagination")
-    page_size = serializers.IntegerField(required=False, help_text="Number of items per page")
+    page_size = serializers.IntegerField(required=False, help_text="Number of items per page (max 100)")
 
 
 class ProductDetailPostRequestSerializer(serializers.Serializer):
