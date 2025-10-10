@@ -27,7 +27,7 @@ export const useCartStore = defineStore('cart', {
             quantity: it.quantity,
             name: it.product.name,
             price: it.product.discounted_price ?? it.product.price,
-            image: it.product.image_url,
+            image: it.product.image || (it.product.images && it.product.images.length > 0 ? it.product.images[0].image_url : null),
           }))
         } 
         // Handle anonymous users (data is a dictionary of product_id: quantity)
@@ -43,7 +43,7 @@ export const useCartStore = defineStore('cart', {
                   quantity: data[pid],
                   name: product.name,
                   price: product.discounted_price ?? product.price,
-                  image: product.images?.[0]?.image_url
+                  image: product.image || (product.images && product.images.length > 0 ? product.images[0].image_url : null)
                 }
               } catch (e) {
                 console.error(`Failed to fetch product ${pid}:`, e)

@@ -46,7 +46,7 @@ const placeholder = 'https://placehold.co/600x400?text=No+Image'
 function getImage() {
   if (props.product.image) return props.product.image
   if (props.product.images && props.product.images.length > 0) {
-    return props.product.images[0].image_url
+    return props.product.images[0].image_url || props.product.images[0].image
   }
   return placeholder
 }
