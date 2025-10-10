@@ -15,14 +15,21 @@
     <div v-else class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
       <div v-for="p in products" :key="p.id" class="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300">
         <router-link :to="`/products/${p.id}`" class="block">
-          <div class="relative overflow-hidden bg-gray-100">
-            <img :src="p.images?.[0]?.image_url || placeholder" class="w-full h-56 object-cover group-hover:scale-110 transition-transform duration-300" alt="" />
-            <div v-if="p.discount_percent > 0" class="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold">
+          <div class="relative overflow-hidden bg-white">
+            <!-- Fixed size container for consistent image display -->
+            <div class="w-full h-64 flex items-center justify-center bg-gray-50 p-2">
+              <img 
+                :src="p.images?.[0]?.image_url || placeholder" 
+                class="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" 
+                alt=""
+              />
+            </div>
+            <div v-if="p.discount_percent > 0" class="absolute top-3 right-3 bg-red-500 text-white px-3 py-1.5 rounded-full text-sm font-bold shadow-lg">
               -{{ p.discount_percent }}%
             </div>
           </div>
-          <div class="p-4">
-            <h3 class="font-semibold text-lg mb-2 truncate group-hover:text-blue-600 transition">{{ p.name }}</h3>
+          <div class="p-4 bg-white">
+            <h3 class="font-bold text-base mb-2 text-gray-900 overflow-hidden" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; min-height: 3rem;">{{ p.name }}</h3>
             <div class="flex items-center gap-2 mb-2">
               <span class="text-xl font-bold">{{ currency(p.discounted_price ?? p.price) }}</span>
               <span v-if="p.discount_percent > 0" class="text-sm text-gray-400 line-through">{{ currency(p.price) }}</span>

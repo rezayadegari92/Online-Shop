@@ -1,18 +1,22 @@
 <template>
   <div class="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300">
     <router-link :to="`/products/${product.id}`" class="block">
-      <div class="relative overflow-hidden bg-gray-100">
-        <img 
-          :src="getImage()" 
-          class="w-full h-56 object-cover group-hover:scale-110 transition-transform duration-300" 
-          :alt="product.name"
-        />
-        <div v-if="product.discount_percent > 0" class="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold">
+      <div class="relative overflow-hidden bg-white">
+        <!-- Fixed size container for consistent image display -->
+        <div class="w-full h-64 flex items-center justify-center bg-gray-50 p-2">
+          <img 
+            :src="getImage()" 
+            class="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" 
+            :alt="product.name"
+            @error="handleImageError"
+          />
+        </div>
+        <div v-if="product.discount_percent > 0" class="absolute top-3 right-3 bg-red-500 text-white px-3 py-1.5 rounded-full text-sm font-bold shadow-lg">
           -{{ product.discount_percent }}%
         </div>
       </div>
-      <div class="p-4">
-        <h3 class="font-semibold text-lg mb-2 truncate group-hover:text-blue-600 transition">{{ product.name }}</h3>
+      <div class="p-4 bg-white">
+        <h3 class="font-bold text-base mb-2 text-gray-900 overflow-hidden" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; min-height: 3rem;">{{ product.name }}</h3>
         <div class="flex items-center gap-2 mb-2">
           <span class="text-xl font-bold text-gray-900">{{ currency(product.discounted_price ?? product.price) }}</span>
           <span v-if="product.discount_percent > 0" class="text-sm text-gray-400 line-through">{{ currency(product.price) }}</span>
@@ -69,6 +73,14 @@ function currency(v: string | number) {
 
 function handleAddToCart() {
   emit('add-to-cart', props.product.id)
+}
+
+function handleImageError(event: Event) {
+  // Fallback to placeholder if image fails to load
+  const img = event.target as HTMLImageElement
+  if (img.src !== placeholder) {
+    img.src = placeholder
+  }
 }
 </script>
 
