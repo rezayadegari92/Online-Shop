@@ -1,15 +1,15 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-6">
+  <div class="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-6">
     <div class="w-full max-w-md">
       <!-- Animated Background Shapes -->
       <div class="fixed inset-0 overflow-hidden pointer-events-none">
-        <div class="absolute top-20 left-10 w-72 h-72 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
-        <div class="absolute top-40 right-10 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
-        <div class="absolute -bottom-8 left-20 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
+        <div class="absolute top-20 left-10 w-72 h-72 bg-blue-300 dark:bg-blue-900 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-xl opacity-70 dark:opacity-30 animate-blob"></div>
+        <div class="absolute top-40 right-10 w-72 h-72 bg-purple-300 dark:bg-purple-900 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-xl opacity-70 dark:opacity-30 animate-blob animation-delay-2000"></div>
+        <div class="absolute -bottom-8 left-20 w-72 h-72 bg-pink-300 dark:bg-pink-900 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-xl opacity-70 dark:opacity-30 animate-blob animation-delay-4000"></div>
       </div>
 
       <!-- Login Card -->
-      <div class="relative bg-white rounded-3xl shadow-2xl overflow-hidden animate-slideUp">
+      <div class="relative bg-white dark:bg-gray-800 rounded-3xl shadow-2xl dark:shadow-gray-900 overflow-hidden animate-slideUp">
         <!-- Gradient Header -->
         <div class="relative h-32 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 overflow-hidden">
           <div class="absolute inset-0 bg-pattern opacity-10"></div>
@@ -111,7 +111,7 @@
       </div>
 
       <!-- Footer Text -->
-      <p class="text-center mt-6 text-gray-600 text-sm">
+      <p class="text-center mt-6 text-gray-600 dark:text-gray-400 text-sm">
         Secure login powered by JWT authentication
       </p>
     </div>
@@ -208,7 +208,7 @@ async function submit() {
 }
 
 .auth-input {
-  @apply w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-transparent focus:outline-none transition-all duration-300;
+  @apply w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl focus:border-transparent focus:outline-none transition-all duration-300;
 }
 
 .input-border {

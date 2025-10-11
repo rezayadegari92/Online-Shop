@@ -1,25 +1,25 @@
 <template>
-  <div class="max-w-7xl mx-auto p-6">
+  <div class="max-w-7xl mx-auto p-6 min-h-screen">
     <div class="flex items-center justify-between mb-6">
-      <h1 class="text-3xl font-bold">Products</h1>
-      <div v-if="totalCount > 0" class="text-gray-600">
+      <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Products</h1>
+      <div v-if="totalCount > 0" class="text-gray-600 dark:text-gray-400">
         Showing {{ products.length }} of {{ totalCount }} products
       </div>
     </div>
     
     <!-- Products Grid -->
-    <div v-if="loading" class="text-center py-12">Loading...</div>
-    <div v-else-if="products.length === 0" class="text-center py-12 text-gray-500">
+    <div v-if="loading" class="text-center py-12 text-gray-700 dark:text-gray-300">Loading...</div>
+    <div v-else-if="products.length === 0" class="text-center py-12 text-gray-500 dark:text-gray-400">
       No products found
     </div>
     <div v-else class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-      <div v-for="p in products" :key="p.id" class="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300">
+      <div v-for="p in products" :key="p.id" class="group bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-md hover:shadow-2xl dark:shadow-gray-900 transition-all duration-300">
         <router-link :to="`/products/${p.id}`" class="block">
-          <div class="relative overflow-hidden bg-white">
+          <div class="relative overflow-hidden bg-white dark:bg-gray-700">
             <!-- Fixed size container for consistent image display -->
-            <div class="w-full h-64 flex items-center justify-center bg-gray-50 p-2">
+            <div class="w-full h-64 flex items-center justify-center bg-gray-50 dark:bg-gray-700 p-2">
               <img 
-                :src="p.images?.[0]?.image_url || placeholder" 
+                :src="getProductImage(p)" 
                 class="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" 
                 alt=""
               />
@@ -28,13 +28,13 @@
               -{{ p.discount_percent }}%
             </div>
           </div>
-          <div class="p-4 bg-white">
-            <h3 class="font-bold text-base mb-2 text-gray-900 overflow-hidden" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; min-height: 3rem;">{{ p.name }}</h3>
+          <div class="p-4 bg-white dark:bg-gray-800">
+            <h3 class="font-bold text-base mb-2 text-gray-900 dark:text-gray-100 overflow-hidden" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; min-height: 3rem;">{{ p.name }}</h3>
             <div class="flex items-center gap-2 mb-2">
-              <span class="text-xl font-bold">{{ currency(p.discounted_price ?? p.price) }}</span>
-              <span v-if="p.discount_percent > 0" class="text-sm text-gray-400 line-through">{{ currency(p.price) }}</span>
+              <span class="text-xl font-bold text-gray-900 dark:text-gray-100">{{ currency(p.discounted_price ?? p.price) }}</span>
+              <span v-if="p.discount_percent > 0" class="text-sm text-gray-400 dark:text-gray-500 line-through">{{ currency(p.price) }}</span>
             </div>
-            <div class="flex items-center gap-1 text-yellow-500 text-sm">
+            <div class="flex items-center gap-1 text-yellow-500 dark:text-yellow-400 text-sm">
               <span>★</span>
               <span>{{ p.avg_rating || 'N/A' }}</span>
             </div>
@@ -52,7 +52,7 @@
       <button 
         @click="goToPreviousPage"
         :disabled="!hasPrevious || loading"
-        class="flex items-center px-4 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        class="flex items-center px-4 py-2 text-sm font-medium text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
@@ -62,7 +62,7 @@
 
       <!-- Page Info -->
       <div class="flex items-center space-x-2">
-        <span class="text-sm text-gray-700">
+        <span class="text-sm text-gray-700 dark:text-gray-300">
           Page {{ currentPage }} of {{ totalPages }}
         </span>
       </div>
@@ -71,7 +71,7 @@
       <button 
         @click="goToNextPage"
         :disabled="!hasNext || loading"
-        class="flex items-center px-4 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        class="flex items-center px-4 py-2 text-sm font-medium text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         Next
         <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -82,11 +82,11 @@
 
     <!-- Page Size Selector -->
     <div v-if="totalCount > 0" class="mt-6 flex items-center justify-center">
-      <label class="text-sm text-gray-700 mr-2">Items per page:</label>
+      <label class="text-sm text-gray-700 dark:text-gray-300 mr-2">Items per page:</label>
       <select 
         v-model="pageSize" 
         @change="changePageSize"
-        class="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        class="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
       >
         <option value="10">10</option>
         <option value="20">20</option>
@@ -102,6 +102,7 @@ import { useRouter, useRoute } from 'vue-router'
 import api from '../utils/http'
 import { useCartStore } from '../stores/cart.store'
 import { useAuthStore } from '../stores/auth.store'
+import { getProductImageUrl } from '../utils/image'
 
 const loading = ref(true)
 const products = ref<any[]>([])
@@ -125,6 +126,10 @@ const totalPages = computed(() => Math.ceil(totalCount.value / pageSize.value))
 function currency(v: string | number) {
   const n = typeof v === 'number' ? v : parseFloat(v as string)
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
+}
+
+function getProductImage(product: any) {
+  return getProductImageUrl(product)
 }
 
 async function loadProducts() {

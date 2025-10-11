@@ -1,16 +1,16 @@
 <template>
-  <div class="max-w-5xl mx-auto p-6" v-if="product">
+  <div class="max-w-5xl mx-auto p-6 min-h-screen" v-if="product">
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div>
-        <img :src="product.images?.[active]?.image_url || placeholder" class="w-full h-80 object-cover rounded" />
+        <img :src="getImageUrl(product.images?.[active]?.image_url || product.images?.[active]?.image)" class="w-full h-80 object-cover rounded bg-gray-100 dark:bg-gray-800" />
         <div class="flex gap-2 mt-2 overflow-x-auto">
-          <img v-for="(img, i) in product.images" :key="img.id" :src="img.image_url" class="h-16 w-16 object-cover rounded border cursor-pointer" @click="active = i" />
+          <img v-for="(img, i) in product.images" :key="img.id" :src="getImageUrl(img.image_url || img.image)" class="h-16 w-16 object-cover rounded border border-gray-300 dark:border-gray-600 cursor-pointer" @click="active = i" />
         </div>
       </div>
       <div>
-        <h1 class="text-2xl font-semibold">{{ product.name }}</h1>
-        <div class="text-lg text-gray-700 my-2">{{ currency(product.discounted_price ?? product.price) }}</div>
-        <p class="text-sm text-gray-600 mb-4">{{ product.details }}</p>
+        <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-100">{{ product.name }}</h1>
+        <div class="text-lg text-gray-700 dark:text-gray-300 my-2">{{ currency(product.discounted_price ?? product.price) }}</div>
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">{{ product.details }}</p>
         <div class="flex gap-2">
           <button class="btn" @click="addToCart()">Add to cart</button>
         </div>
@@ -50,6 +50,7 @@ import { useRoute, useRouter } from 'vue-router'
 import api from '../utils/http'
 import { useCartStore } from '../stores/cart.store'
 import { useAuthStore } from '../stores/auth.store'
+import { getImageUrl } from '../utils/image'
 
 const route = useRoute()
 const router = useRouter()

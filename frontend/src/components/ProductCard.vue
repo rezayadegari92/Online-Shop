@@ -1,9 +1,9 @@
 <template>
-  <div class="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300">
+  <div class="group bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-md hover:shadow-2xl dark:shadow-gray-900 transition-all duration-300">
     <router-link :to="`/products/${product.id}`" class="block">
-      <div class="relative overflow-hidden bg-white">
+      <div class="relative overflow-hidden bg-white dark:bg-gray-700">
         <!-- Fixed size container for consistent image display -->
-        <div class="w-full h-64 flex items-center justify-center bg-gray-50 p-2">
+        <div class="w-full h-64 flex items-center justify-center bg-gray-50 dark:bg-gray-700 p-2">
           <img 
             :src="getImage()" 
             class="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" 
@@ -15,17 +15,17 @@
           -{{ product.discount_percent }}%
         </div>
       </div>
-      <div class="p-4 bg-white">
-        <h3 class="font-bold text-base mb-2 text-gray-900 overflow-hidden" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; min-height: 3rem;">{{ product.name }}</h3>
+      <div class="p-4 bg-white dark:bg-gray-800">
+        <h3 class="font-bold text-base mb-2 text-gray-900 dark:text-gray-100 overflow-hidden" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; min-height: 3rem;">{{ product.name }}</h3>
         <div class="flex items-center gap-2 mb-2">
-          <span class="text-xl font-bold text-gray-900">{{ currency(product.discounted_price ?? product.price) }}</span>
-          <span v-if="product.discount_percent > 0" class="text-sm text-gray-400 line-through">{{ currency(product.price) }}</span>
+          <span class="text-xl font-bold text-gray-900 dark:text-gray-100">{{ currency(product.discounted_price ?? product.price) }}</span>
+          <span v-if="product.discount_percent > 0" class="text-sm text-gray-400 dark:text-gray-500 line-through">{{ currency(product.price) }}</span>
         </div>
-        <div class="flex items-center gap-1 text-yellow-500 text-sm">
+        <div class="flex items-center gap-1 text-yellow-500 dark:text-yellow-400 text-sm">
           <span>★</span>
           <span>{{ product.average_rating || product.avg_rating || 'N/A' }}</span>
         </div>
-        <p v-if="product.brand" class="text-xs text-gray-500 mt-1">{{ getBrandName() }}</p>
+        <p v-if="product.brand" class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ getBrandName() }}</p>
       </div>
     </router-link>
     <div class="p-4 pt-0">
@@ -37,6 +37,8 @@
 </template>
 
 <script setup lang="ts">
+import { getProductImageUrl } from '../utils/image'
+
 const props = defineProps<{
   product: any
 }>()
@@ -48,11 +50,7 @@ const emit = defineEmits<{
 const placeholder = 'https://placehold.co/600x400?text=No+Image'
 
 function getImage() {
-  if (props.product.image) return props.product.image
-  if (props.product.images && props.product.images.length > 0) {
-    return props.product.images[0].image_url || props.product.images[0].image
-  }
-  return placeholder
+  return getProductImageUrl(props.product)
 }
 
 function getBrandName() {
