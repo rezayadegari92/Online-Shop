@@ -6,6 +6,17 @@ from django.shortcuts import get_object_or_404
 
 
 from products.models import Category, Product, Comment, Rating, Brand
+
+
+def get_category_descendants(category):
+    """
+    Recursively get all descendant category IDs including the category itself.
+    Returns a list of category IDs.
+    """
+    category_ids = [category.id]
+    for subcategory in category.subcategories.all():
+        category_ids.extend(get_category_descendants(subcategory))
+    return category_ids
 from .serializers import (
     ProductSerializer, 
     ProductRatingSerializer, 
@@ -77,11 +88,14 @@ class ProductListView(APIView):
                 Q(details__icontains=search_query)
             )
 
-        # Apply category filter
+        # Apply category filter (including all subcategories)
         if category_id:
             try:
-                products = products.filter(category_id=category_id)
-            except ValueError:
+                category = Category.objects.get(pk=category_id)
+                # Get all descendant category IDs (including the category itself and all children)
+                category_ids = get_category_descendants(category)
+                products = products.filter(category_id__in=category_ids)
+            except (ValueError, Category.DoesNotExist):
                 return Response({'detail': 'Invalid category ID.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Apply brand filter
@@ -220,7 +234,13 @@ class CategoryProductsView(APIView):
         except Category.DoesNotExist:
             return Response({'detail': 'Category not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        products = category.products.select_related('brand', 'category').all().order_by('id')
+        # Get all descendant category IDs (including the category itself and all children)
+        category_ids = get_category_descendants(category)
+        # Get products from the category and all its subcategories
+        products = Product.objects.select_related('brand', 'category').filter(
+            category_id__in=category_ids
+        ).order_by('id')
+        
         paginator = CustomPageNumberPagination()
         paginated_products = paginator.paginate_queryset(products, request)
         serializer = ProductSerializer(paginated_products, many=True, context={'request': request})
