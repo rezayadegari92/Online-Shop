@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth import get_user_model
 from .serializers import CustomerSignupSerializer, LoginSerializer, VerifyOTPSerializer
+import logging
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
 from .schemas import (
     CustomerSignupRequestSerializer,
@@ -131,14 +132,15 @@ class VerifyOTPView(APIView):
             if not signup_data:
                 return Response({"error": "Signup session expired"}, status=400)
 
-            user_data = signup_data['user_data']
+            user_data = signup_data['user_data'].copy()  # Make a copy to avoid modifying the original
             address_data = signup_data.get('address_data')
-            # Verify OTP
+            # Verify OTP and convert birth_date from string to date object
             try:
                 birth_date = datetime.strptime(
                     user_data['birth_date'], 
                     "%Y-%m-%d"
                 ).date()
+                user_data['birth_date'] = birth_date  # Update user_data with date object
             except (KeyError, ValueError):
                 return Response(
                     {"error": "Invalid birth date format"},
@@ -152,16 +154,31 @@ class VerifyOTPView(APIView):
                 return Response({"error": "Invalid or expired OTP"}, status=400)
 
             # Create user with stored data
-            user = User.objects.create_user(
-                **user_data,
-                user_type='customer'
-                
-            )
+            try:
+                user = User.objects.create_user(
+                    **user_data,
+                    user_type='customer'
+                )
+            except Exception as e:
+                return Response(
+                    {"error": f"Failed to create user: {str(e)}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Create address if provided
             if address_data:
-                Address.objects.create(user=user, **address_data)
+                try:
+                    Address.objects.create(user=user, **address_data)
+                except Exception as e:
+                    # User is created, but address failed - log error but don't fail signup
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"Failed to create address for user {user.id}: {str(e)}")
+            
+            # Clean up session data
             if 'signup_data' in request.session:
                 del request.session['signup_data']
-            # login(request, user)
+            
+            # Generate JWT tokens
             refresh = RefreshToken.for_user(user)
             return Response({
                 "message": "Registration successful",
