@@ -13,7 +13,7 @@ export default defineConfig({
   preview: {
     port: 3000,
     host: '0.0.0.0',
-    allowedHosts: 'all',
+    allowedHosts: true,
     proxy: {
       '/api': {
         target: 'http://web:8000',
