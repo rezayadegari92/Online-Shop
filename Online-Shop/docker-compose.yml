@@ -23,8 +23,10 @@ services:
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - ALLOWED_HOSTS=*
     depends_on:
-      - redis
-      - db
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
 
   celery:
     container_name: onlineshop_celery
@@ -37,14 +39,23 @@ services:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
     depends_on:
-      - redis
-      - web
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+      web:
+        condition: service_started
 
   redis:
     container_name: onlineshop_redis
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   db:
     container_name: onlineshop_db
@@ -56,7 +67,12 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U onlineshop -d onlineshop"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 volumes:
   media_volume:

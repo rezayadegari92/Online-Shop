@@ -314,7 +314,7 @@ async function submit() {
 }
 
 .auth-input {
-  @apply w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-transparent focus:outline-none transition-all duration-300;
+  @apply w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-transparent focus:outline-none transition-all duration-300 text-gray-900 placeholder:text-gray-400;
 }
 
 .input-border {
