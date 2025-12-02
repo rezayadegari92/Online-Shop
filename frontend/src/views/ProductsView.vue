@@ -34,9 +34,9 @@
               <span class="text-xl font-bold text-gray-900 dark:text-gray-100">{{ currency(p.discounted_price ?? p.price) }}</span>
               <span v-if="p.discount_percent > 0" class="text-sm text-gray-400 dark:text-gray-500 line-through">{{ currency(p.price) }}</span>
             </div>
-            <div class="flex items-center gap-1 text-yellow-500 dark:text-yellow-400 text-sm">
+            <div v-if="hasRating(p)" class="flex items-center gap-1 text-yellow-500 dark:text-yellow-400 text-sm">
               <span>★</span>
-              <span>{{ p.avg_rating || 'N/A' }}</span>
+              <span>{{ p.avg_rating }}</span>
             </div>
           </div>
         </router-link>
@@ -130,6 +130,11 @@ function currency(v: string | number) {
 
 function getProductImage(product: any) {
   return getProductImageUrl(product)
+}
+
+function hasRating(product: any): boolean {
+  const rating = product.avg_rating
+  return rating !== null && rating !== undefined && rating !== 0
 }
 
 async function loadProducts() {

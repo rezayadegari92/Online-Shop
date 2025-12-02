@@ -21,9 +21,9 @@
           <span class="text-xl font-bold text-gray-900 dark:text-gray-100">{{ currency(product.discounted_price ?? product.price) }}</span>
           <span v-if="product.discount_percent > 0" class="text-sm text-gray-400 dark:text-gray-500 line-through">{{ currency(product.price) }}</span>
         </div>
-        <div class="flex items-center gap-1 text-yellow-500 dark:text-yellow-400 text-sm">
+        <div v-if="hasRating(product)" class="flex items-center gap-1 text-yellow-500 dark:text-yellow-400 text-sm">
           <span>★</span>
-          <span>{{ product.average_rating || product.avg_rating || 'N/A' }}</span>
+          <span>{{ getRating(product) }}</span>
         </div>
         <p v-if="product.brand" class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ getBrandName() }}</p>
       </div>
@@ -57,6 +57,15 @@ function getBrandName() {
   if (typeof props.product.brand === 'string') return props.product.brand
   if (props.product.brand && props.product.brand.name) return props.product.brand.name
   return ''
+}
+
+function hasRating(product: any): boolean {
+  const rating = product.average_rating ?? product.avg_rating
+  return rating !== null && rating !== undefined && rating !== 0
+}
+
+function getRating(product: any): string | number {
+  return product.average_rating ?? product.avg_rating ?? 0
 }
 
 function currency(v: string | number) {
