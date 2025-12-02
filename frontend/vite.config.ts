@@ -16,17 +16,17 @@ export default defineConfig({
     allowedHosts: true,
     proxy: {
       '/api': {
-        target: 'http://web:8000',
+        target: process.env.VITE_BACKEND_URL || 'http://online-shop-appcompose-c9sen2-f6ce07-95-216-121-248.traefik.me',
         changeOrigin: true,
         secure: false,
       },
       '/accounts': {
-        target: 'http://web:8000',
+        target: process.env.VITE_BACKEND_URL || 'http://online-shop-appcompose-c9sen2-f6ce07-95-216-121-248.traefik.me',
         changeOrigin: true,
         secure: false,
       },
       '/media': {
-        target: 'http://web:8000',
+        target: process.env.VITE_BACKEND_URL || 'http://online-shop-appcompose-c9sen2-f6ce07-95-216-121-248.traefik.me',
         changeOrigin: true,
         secure: false,
       }
