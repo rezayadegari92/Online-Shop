@@ -34,7 +34,7 @@ from .schemas import (
     CommentSerializer as CommentSchemaSerializer,
     ProductRatingSerializer as ProductRatingSchemaSerializer
 )
-from django.db.models import Avg
+from django.db.models import Avg, Count
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -256,9 +256,12 @@ class CategoryProductsView(APIView):
 class TopRatedProductsView(APIView):
     permission_classes = [permissions.AllowAny]
     def get(self, request):
-        # Use database aggregation for proper sorting with pagination
+        # Only return products that have at least one rating, sorted by rating
         products = Product.objects.select_related('brand', 'category').annotate(
+            rating_count=Count('ratings'),
             avg_rating=Avg('ratings__value')
+        ).filter(
+            rating_count__gt=0  # Only products with at least one rating
         ).order_by('-avg_rating', 'id')
 
         paginator = CustomPageNumberPagination()
