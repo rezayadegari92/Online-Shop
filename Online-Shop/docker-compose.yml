@@ -28,7 +28,7 @@ services:
     container_name: onlineshop_celery
     image: onlineshop:latest
     working_dir: /app
-    command: celery -A core worker --loglevel=info
+    command: celery -A core.celery_config worker --loglevel=info
     volumes:
       - .:/app
     environment:

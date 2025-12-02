@@ -5,9 +5,12 @@ from celery import Celery
 # Set the default Django settings module for the 'celery' program.
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 
-# Initialize Django before creating Celery app (only if not already initialized)
-if not django.apps.apps.ready:
+# Initialize Django
+try:
     django.setup()
+except RuntimeError:
+    # Django is already set up, ignore
+    pass
 
 celery_app = Celery("core")
 
