@@ -4,6 +4,8 @@ services:
     build: ../frontend
     depends_on:
       - web
+    networks:
+      - onlineshop-network
   web:
     container_name: onlineshop_web
     build: .
@@ -23,6 +25,8 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+    networks:
+      - onlineshop-network
 
   celery:
     container_name: onlineshop_celery
@@ -41,6 +45,8 @@ services:
         condition: service_healthy
       web:
         condition: service_started
+    networks:
+      - onlineshop-network
 
   redis:
     container_name: onlineshop_redis
@@ -50,6 +56,12 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    networks:
+      - onlineshop-network
+
+networks:
+  onlineshop-network:
+    driver: bridge
 
 volumes:
   media_volume:

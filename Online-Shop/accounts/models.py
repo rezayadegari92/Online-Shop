@@ -82,22 +82,37 @@ class OTP(models.Model):
         otp = cls.objects.create(email=email, otp_code= otp_code )
         
         # Try to send email via Celery task, fallback to synchronous if Redis is unavailable
-        try:
-            send_otp_email_task.delay(email, otp_code)
-        except Exception as e:
-            # If Celery/Redis is unavailable, send email synchronously
-            logger.warning(f"Celery task failed, sending email synchronously: {str(e)}")
+        import time
+        max_retries = 3
+        retry_delay = 0.5  # seconds
+        
+        for attempt in range(max_retries):
             try:
-                send_mail(
-                    subject="Your OTP Code",
-                    message=f"Your OTP code is: {otp_code}",
-                    from_email="yadegarireza50@gmail.com",
-                    recipient_list=[email],
-                    fail_silently=False,
-                )
-            except Exception as email_error:
-                logger.error(f"Failed to send OTP email: {str(email_error)}")
-                # Don't raise exception - OTP is still created and can be retrieved
+                send_otp_email_task.delay(email, otp_code)
+                return otp_code  # Success, return early
+            except Exception as e:
+                error_msg = str(e).lower()
+                # Check if it's a connection/DNS error that might be temporary
+                if ('connection' in error_msg or 'name resolution' in error_msg or 
+                    'temporary failure' in error_msg) and attempt < max_retries - 1:
+                    logger.warning(f"Celery connection attempt {attempt + 1} failed, retrying: {str(e)}")
+                    time.sleep(retry_delay * (attempt + 1))  # Exponential backoff
+                    continue
+                else:
+                    # If Celery/Redis is unavailable after retries, send email synchronously
+                    logger.warning(f"Celery task failed after {attempt + 1} attempts, sending email synchronously: {str(e)}")
+                    try:
+                        send_mail(
+                            subject="Your OTP Code",
+                            message=f"Your OTP code is: {otp_code}",
+                            from_email="yadegarireza50@gmail.com",
+                            recipient_list=[email],
+                            fail_silently=False,
+                        )
+                    except Exception as email_error:
+                        logger.error(f"Failed to send OTP email: {str(email_error)}")
+                        # Don't raise exception - OTP is still created and can be retrieved
+                    return otp_code
         
         return otp_code
     def __str__(self):

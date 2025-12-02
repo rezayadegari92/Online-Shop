@@ -20,5 +20,10 @@ celery_app = Celery("core")
 #   should have a `CELERY_` prefix.
 celery_app.config_from_object("django.conf:settings", namespace="CELERY")
 
+# Configure broker connection to be lazy (don't connect until needed)
+celery_app.conf.broker_connection_retry_on_startup = True
+celery_app.conf.broker_connection_retry = True
+celery_app.conf.broker_connection_max_retries = 10
+
 # Load task modules from all registered Django apps.
 celery_app.autodiscover_tasks()
