@@ -14,5 +14,8 @@ RUN pip install --upgrade pip && pip install --default-timeout=120 -r requiremen
 
 COPY . .
 
+# Create media directory if it doesn't exist
+RUN mkdir -p /app/media
+
 EXPOSE 8000
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
