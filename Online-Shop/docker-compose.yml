@@ -8,12 +8,14 @@ services:
     container_name: onlineshop_web
     build: .
     image: onlineshop:latest
+    working_dir: /app
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - .:/app
       - media_volume:/app/media
     environment:
       - DJANGO_SETTINGS_MODULE=core.settings
+      - PYTHONPATH=/app
       - DEBUG=1
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
@@ -25,11 +27,13 @@ services:
   celery:
     container_name: onlineshop_celery
     image: onlineshop:latest
-    command: celery -A core.celery_config.celery_app worker --loglevel=info
+    working_dir: /app
+    command: celery -A core worker --loglevel=info
     volumes:
       - .:/app
     environment:
       - DJANGO_SETTINGS_MODULE=core.settings
+      - PYTHONPATH=/app
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
     depends_on:
