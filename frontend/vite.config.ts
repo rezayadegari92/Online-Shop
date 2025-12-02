@@ -12,10 +12,24 @@ export default defineConfig({
   },
   preview: {
     port: 3000,
+    host: '0.0.0.0',
+    allowedHosts: 'all',
     proxy: {
-      '/api': 'http://web:8000',
-      '/accounts': 'http://web:8000',
-      '/media': 'http://web:8000'
+      '/api': {
+        target: 'http://web:8000',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/accounts': {
+        target: 'http://web:8000',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/media': {
+        target: 'http://web:8000',
+        changeOrigin: true,
+        secure: false,
+      }
     }
   }
 })
