@@ -21,8 +21,6 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-      db:
-        condition: service_healthy
 
   celery:
     container_name: onlineshop_celery
@@ -37,8 +35,6 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-      db:
-        condition: service_healthy
       web:
         condition: service_started
 
@@ -51,21 +47,5 @@ services:
       timeout: 3s
       retries: 5
 
-  db:
-    container_name: onlineshop_db
-    image: postgres:16-alpine
-    environment:
-      - POSTGRES_DB=onlineshop
-      - POSTGRES_USER=onlineshop
-      - POSTGRES_PASSWORD=onlineshop
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U onlineshop -d onlineshop"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
 volumes:
   media_volume:
-  pgdata:
