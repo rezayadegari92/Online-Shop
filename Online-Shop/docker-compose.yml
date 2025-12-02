@@ -2,6 +2,8 @@ services:
   frontend:
     container_name: onlineshop_frontend
     build: ../frontend
+    ports:
+      - "3000:3000"
     depends_on:
       - web
   web:
