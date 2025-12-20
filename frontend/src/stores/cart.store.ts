@@ -1,25 +1,31 @@
-import { defineStore } from 'pinia'
-import api from '../utils/http'
+import { defineStore } from "pinia";
+import api from "../utils/http";
 
-interface CartItem { 
-  product_id: number
-  quantity: number
-  name?: string
-  price?: number
-  image?: string
+interface CartItem {
+  product_id: number;
+  quantity: number;
+  name?: string;
+  price?: number;
+  image?: string;
 }
 
-export const useCartStore = defineStore('cart', {
+export const useCartStore = defineStore("cart", {
   state: () => ({
     items: [] as CartItem[],
     isOpen: false,
+    discountCode: null as string | null,
+    discountPercent: 0,
+    totalPrice: 0,
+    finalPrice: 0,
   }),
   actions: {
-    toggle(open?: boolean) { this.isOpen = open ?? !this.isOpen },
+    toggle(open?: boolean) {
+      this.isOpen = open ?? !this.isOpen;
+    },
     async load() {
       try {
-        const { data } = await api.get('/api/cart/')
-        
+        const { data } = await api.get("/api/cart/");
+
         // Handle authenticated users (data has items array)
         if (data.items && Array.isArray(data.items)) {
           this.items = data.items.map((it: any) => ({
@@ -27,75 +33,105 @@ export const useCartStore = defineStore('cart', {
             quantity: it.quantity,
             name: it.product.name,
             price: it.product.discounted_price ?? it.product.price,
-            image: it.product.image || (it.product.images && it.product.images.length > 0 ? it.product.images[0].image_url : null),
-          }))
-        } 
+            image:
+              it.product.image ||
+              (it.product.images && it.product.images.length > 0
+                ? it.product.images[0].image_url
+                : null),
+          }));
+
+          // Store discount information
+          this.discountPercent = data.discount_percent || 0;
+          this.totalPrice = data.total_price || 0;
+          this.finalPrice = data.final_price || 0;
+        }
         // Handle anonymous users (data is a dictionary of product_id: quantity)
-        else if (typeof data === 'object' && !Array.isArray(data) && !data.items) {
+        else if (
+          typeof data === "object" &&
+          !Array.isArray(data) &&
+          !data.items
+        ) {
           // For anonymous users, we need to fetch product details
-          const productIds = Object.keys(data).filter(key => key !== 'discount_code')
+          const productIds = Object.keys(data).filter(
+            (key) => key !== "discount_code",
+          );
           if (productIds.length > 0) {
             const productPromises = productIds.map(async (pid) => {
               try {
-                const { data: product } = await api.get(`/api/products/${pid}/`)
+                const { data: product } = await api.get(
+                  `/api/products/${pid}/`,
+                );
                 return {
                   product_id: parseInt(pid),
                   quantity: data[pid],
                   name: product.name,
                   price: product.discounted_price ?? product.price,
-                  image: product.image || (product.images && product.images.length > 0 ? product.images[0].image_url : null)
-                }
+                  image:
+                    product.image ||
+                    (product.images && product.images.length > 0
+                      ? product.images[0].image_url
+                      : null),
+                };
               } catch (e) {
-                console.error(`Failed to fetch product ${pid}:`, e)
-                return null
+                console.error(`Failed to fetch product ${pid}:`, e);
+                return null;
               }
-            })
-            const products = await Promise.all(productPromises)
-            this.items = products.filter(p => p !== null) as CartItem[]
+            });
+            const products = await Promise.all(productPromises);
+            this.items = products.filter((p) => p !== null) as CartItem[];
           } else {
-            this.items = []
+            this.items = [];
+            this.discountPercent = 0;
+            this.totalPrice = 0;
+            this.finalPrice = 0;
           }
         } else {
-          this.items = []
+          this.items = [];
+          this.discountPercent = 0;
+          this.totalPrice = 0;
+          this.finalPrice = 0;
         }
       } catch (e) {
-        console.error('Failed to load cart:', e)
-        this.items = []
+        console.error("Failed to load cart:", e);
+        this.items = [];
+        this.discountPercent = 0;
+        this.totalPrice = 0;
+        this.finalPrice = 0;
       }
     },
     async add(product_id: number, quantity = 1) {
       try {
-        const response = await api.post('/api/cart/', { product_id, quantity })
-        await this.load()
-        this.isOpen = true
+        const response = await api.post("/api/cart/", { product_id, quantity });
+        await this.load();
+        this.isOpen = true;
       } catch (e) {
-        throw e
+        throw e;
       }
     },
     async update(product_id: number, quantity: number) {
       try {
         if (quantity === 0) {
-          await this.remove(product_id)
+          await this.remove(product_id);
         } else {
-          await api.put('/api/cart/', { product_id, quantity })
-          await this.load()
+          await api.put("/api/cart/", { product_id, quantity });
+          await this.load();
         }
       } catch (e) {
-        throw e
+        throw e;
       }
     },
     async remove(product_id: number) {
       try {
-        await api.delete('/api/cart/', { data: { product_id } })
-        await this.load()
+        await api.delete("/api/cart/", { data: { product_id } });
+        await this.load();
       } catch (e) {
-        throw e
+        throw e;
       }
     },
     async checkout() {
-      const { data } = await api.post('/api/cart/checkout/')
-      await this.load()
-      return data
+      const { data } = await api.post("/api/cart/checkout/");
+      await this.load();
+      return data;
     },
-  }
-})
+  },
+});

@@ -8,14 +8,14 @@
         <!-- Cart Items Section -->
         <div class="bg-white rounded-lg shadow p-6">
           <h2 class="text-2xl font-semibold mb-4">Order Summary</h2>
-          
+
           <div v-if="cartLoading" class="text-center py-8">Loading cart...</div>
-          
+
           <div v-else-if="cart.items.length === 0" class="text-center py-8 text-gray-500">
             <p>Your cart is empty</p>
             <router-link to="/products" class="text-blue-600 hover:underline mt-2 inline-block">Continue Shopping</router-link>
           </div>
-          
+
           <div v-else class="space-y-4">
             <div v-for="item in cart.items" :key="item.product_id" class="flex gap-4 p-4 border rounded-lg">
               <img :src="item.image || placeholder" class="w-20 h-20 object-cover rounded" />
@@ -24,11 +24,11 @@
                 <p class="text-gray-600">{{ formatPrice(item.price) }}</p>
                 <div class="flex items-center gap-2 mt-2">
                   <label class="text-sm">Qty:</label>
-                  <input 
-                    type="number" 
-                    min="1" 
-                    class="w-16 border rounded px-2 py-1 text-center" 
-                    :value="item.quantity" 
+                  <input
+                    type="number"
+                    min="1"
+                    class="w-16 border rounded px-2 py-1 text-center"
+                    :value="item.quantity"
                     @change="updateQuantity(item.product_id, $event)"
                   />
                   <button @click="removeItem(item.product_id)" class="text-red-500 hover:text-red-700 ml-auto">
@@ -47,8 +47,8 @@
         <div class="bg-white rounded-lg shadow p-6">
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-2xl font-semibold">Shipping Address</h2>
-            <button 
-              @click="showAddressForm = !showAddressForm" 
+            <button
+              @click="showAddressForm = !showAddressForm"
               class="text-sm px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
             >
               {{ showAddressForm ? 'Cancel' : '+ Add Address' }}
@@ -68,15 +68,15 @@
 
           <!-- Address List -->
           <div v-if="loadingAddresses" class="text-center py-4">Loading addresses...</div>
-          
+
           <div v-else-if="addresses.length === 0" class="text-center py-8 text-gray-500">
             <p>No addresses found. Please add a shipping address.</p>
           </div>
-          
+
           <div v-else class="space-y-3">
-            <div 
-              v-for="addr in addresses" 
-              :key="addr.id" 
+            <div
+              v-for="addr in addresses"
+              :key="addr.id"
               class="border rounded-lg p-4 cursor-pointer transition"
               :class="addr.is_default ? 'border-blue-500 bg-blue-50' : 'hover:border-gray-300'"
             >
@@ -93,7 +93,7 @@
                   </div>
                 </form>
               </div>
-              
+
               <div v-else>
                 <div class="flex items-start justify-between">
                   <div class="flex-1">
@@ -124,11 +124,15 @@
       <div class="lg:col-span-1">
         <div class="bg-white rounded-lg shadow p-6 sticky top-20">
           <h2 class="text-xl font-semibold mb-4">Order Total</h2>
-          
+
           <div class="space-y-3 mb-6">
             <div class="flex justify-between text-gray-600">
               <span>Subtotal:</span>
               <span>{{ formatPrice(subtotal) }}</span>
+            </div>
+            <div v-if="cart.discountPercent > 0" class="flex justify-between text-green-600">
+              <span>Discount ({{ cart.discountPercent }}%):</span>
+              <span>-{{ formatPrice(discountAmount) }}</span>
             </div>
             <div class="flex justify-between text-gray-600">
               <span>Shipping:</span>
@@ -136,12 +140,12 @@
             </div>
             <div class="border-t pt-3 flex justify-between text-xl font-bold">
               <span>Total:</span>
-              <span>{{ formatPrice(subtotal) }}</span>
+              <span>{{ formatPrice(finalTotal) }}</span>
             </div>
           </div>
 
-          <button 
-            @click="completeCheckout" 
+          <button
+            @click="completeCheckout"
             class="w-full btn-primary text-lg py-3"
             :disabled="cart.items.length === 0 || !hasDefaultAddress || processing"
           >
@@ -197,6 +201,15 @@ const subtotal = computed(() => {
   return cart.items.reduce((sum, item) => sum + (item.price || 0) * item.quantity, 0)
 })
 
+const discountAmount = computed(() => {
+  if (!cart.discountPercent) return 0
+  return (subtotal.value * cart.discountPercent) / 100
+})
+
+const finalTotal = computed(() => {
+  return subtotal.value - discountAmount.value
+})
+
 const hasDefaultAddress = computed(() => {
   return addresses.value.some(addr => addr.is_default)
 })
@@ -206,7 +219,7 @@ onMounted(async () => {
     router.push('/login?redirect=/checkout')
     return
   }
-  
+
   await loadCart()
   await loadAddresses()
 })
@@ -338,4 +351,3 @@ function formatPrice(price: number) {
   @apply bg-blue-600 text-white rounded px-6 py-3 hover:bg-blue-700 transition font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed;
 }
 </style>
-

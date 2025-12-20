@@ -4,9 +4,9 @@
       <div class="relative overflow-hidden bg-white dark:bg-gray-700">
         <!-- Fixed size container for consistent image display -->
         <div class="w-full h-64 flex items-center justify-center bg-gray-50 dark:bg-gray-700 p-2">
-          <img 
-            :src="getImage()" 
-            class="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" 
+          <img
+            :src="getImage()"
+            class="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
             :alt="product.name"
             @error="handleImageError"
           />
@@ -14,6 +14,8 @@
         <div v-if="product.discount_percent > 0" class="absolute top-3 right-3 bg-red-500 text-white px-3 py-1.5 rounded-full text-sm font-bold shadow-lg">
           -{{ product.discount_percent }}%
         </div>
+        <!-- Wishlist Button -->
+        <WishlistButton :product-id="product.id" variant="floating" size="md" />
       </div>
       <div class="p-4 bg-white dark:bg-gray-800">
         <h3 class="font-bold text-base mb-2 text-gray-900 dark:text-gray-100 overflow-hidden" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; min-height: 3rem;">{{ product.name }}</h3>
@@ -38,6 +40,7 @@
 
 <script setup lang="ts">
 import { getProductImageUrl } from '../utils/image'
+import WishlistButton from './products/WishlistButton.vue'
 
 const props = defineProps<{
   product: any
@@ -70,8 +73,8 @@ function getRating(product: any): string | number {
 
 function currency(v: string | number) {
   const n = typeof v === 'number' ? v : parseFloat(v as string)
-  return new Intl.NumberFormat('en-US', { 
-    style: 'currency', 
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
     currency: 'USD',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0
@@ -92,7 +95,7 @@ function handleImageError(event: Event) {
 </script>
 
 <style scoped>
-.btn { 
+.btn {
   @apply bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg px-4 py-2 hover:from-blue-700 hover:to-blue-800 transition font-semibold shadow-sm hover:shadow-md;
 }
 </style>

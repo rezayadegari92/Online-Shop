@@ -7,6 +7,7 @@
       <div class="flex items-center gap-6">
         <router-link to="/" class="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition font-medium">Home</router-link>
         <router-link to="/products" class="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition font-medium">Products</router-link>
+        <router-link v-if="auth.isAuthenticated" to="/wishlist" class="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition font-medium">Wishlist</router-link>
         <router-link v-if="auth.isAuthenticated" to="/orders" class="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition font-medium">Orders</router-link>
         <router-link v-if="auth.isAuthenticated" to="/profile" class="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition font-medium">Profile</router-link>
         <router-link v-if="!auth.isAuthenticated" to="/login" class="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition font-medium">Login</router-link>
@@ -16,10 +17,10 @@
         <button v-if="auth.isAuthenticated" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition font-medium" @click="logout">
           Logout
         </button>
-        
+
         <!-- Dark Mode Toggle -->
-        <button 
-          @click="theme.toggleTheme()" 
+        <button
+          @click="theme.toggleTheme()"
           class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-all duration-300"
           :title="theme.isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
         >
@@ -32,7 +33,17 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
           </svg>
         </button>
-        
+
+        <!-- Wishlist Button -->
+        <router-link v-if="auth.isAuthenticated" to="/wishlist" class="relative p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition">
+          <svg class="w-6 h-6 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd" />
+          </svg>
+          <span v-if="wishlist.count > 0" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+            {{ wishlist.count }}
+          </span>
+        </router-link>
+
         <!-- Cart Button -->
         <button class="relative p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition" @click="cart.toggle()">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -51,10 +62,12 @@
 import { onMounted } from 'vue'
 import { useAuthStore } from '../../stores/auth.store'
 import { useCartStore } from '../../stores/cart.store'
+import { useWishlistStore } from '../../stores/wishlist.store'
 import { useThemeStore } from '../../stores/theme.store'
 
 const auth = useAuthStore()
 const cart = useCartStore()
+const wishlist = useWishlistStore()
 const theme = useThemeStore()
 
 async function logout() {
@@ -65,6 +78,7 @@ async function logout() {
 onMounted(() => {
   if (auth.isAuthenticated) {
     cart.load()
+    wishlist.fetchWishlist()
   }
 })
 </script>
