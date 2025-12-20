@@ -1,31 +1,34 @@
-from django.test import TestCase
+from decimal import Decimal
+
 from django.contrib.auth import get_user_model
-from .models import Category, Product, Comment, ProductImage
+from django.test import TestCase
+
+from .models import Category, Comment, Product, ProductImage
 
 User = get_user_model()
 
+
 class CategoryModelTest(TestCase):
     def setUp(self):
-        
         self.parent_category = Category.objects.create(name="Electronics")
-        
-        self.child_category = Category.objects.create(name="Smartphones", parent=self.parent_category)
+
+        self.child_category = Category.objects.create(
+            name="Smartphones", parent=self.parent_category
+        )
 
     def test_category_creation(self):
-        
         self.assertEqual(self.parent_category.name, "Electronics")
         self.assertEqual(self.child_category.name, "Smartphones")
         self.assertEqual(self.child_category.parent, self.parent_category)
 
     def test_category_str(self):
-        
         self.assertEqual(str(self.parent_category), "Electronics")
         expected_str = f"{self.parent_category} → {self.child_category.name}"
         self.assertEqual(str(self.child_category), expected_str)
 
     def test_subcategories_relation(self):
-        
         self.assertIn(self.child_category, self.parent_category.subcategories.all())
+
 
 class ProductModelTest(TestCase):
     def setUp(self):
@@ -35,7 +38,7 @@ class ProductModelTest(TestCase):
             price=200,
             discount_percent=10,
             category=self.category,
-            quantity=5
+            quantity=5,
         )
 
     def test_product_creation(self):
@@ -46,25 +49,26 @@ class ProductModelTest(TestCase):
         self.assertEqual(self.product.quantity, 5)
 
     def test_discounted_price_calculation(self):
-        expected_price = self.product.price - (self.product.price * self.product.discount_percent / 100)
+        expected_price = self.product.price - (
+            self.product.price
+            * Decimal(str(self.product.discount_percent))
+            / Decimal("100")
+        )
         self.assertEqual(self.product.discounted_price, expected_price)
 
     def test_product_str(self):
         self.assertEqual(str(self.product), "T-Shirt")
+
 
 class CommentModelTest(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="testuser", password="testpass")
         self.category = Category.objects.create(name="Books")
         self.product = Product.objects.create(
-            name="Python Book",
-            price=150,
-            category=self.category
+            name="Python Book", price=150, category=self.category
         )
         self.comment = Comment.objects.create(
-            product=self.product,
-            author=self.user,
-            content="Great book!"
+            product=self.product, author=self.user, content="Great book!"
         )
 
     def test_comment_creation(self):
@@ -76,17 +80,15 @@ class CommentModelTest(TestCase):
         expected_str = f"Comment by testuser on Python Book"
         self.assertEqual(str(self.comment), expected_str)
 
+
 class ProductImageModelTest(TestCase):
     def setUp(self):
         self.category = Category.objects.create(name="Furniture")
         self.product = Product.objects.create(
-            name="Chair",
-            price=500,
-            category=self.category
+            name="Chair", price=500, category=self.category
         )
         self.image = ProductImage.objects.create(
-            product=self.product,
-            image="products/chair.jpg"
+            product=self.product, image="products/chair.jpg"
         )
 
     def test_product_image_creation(self):
