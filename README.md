@@ -129,6 +129,12 @@ graph TB
 <td align="center" width="20%">
 <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/vuejs/vuejs-original.svg" width="40" height="40"/>
 <br/><b>Vue.js 3</b>
+<br/><small>(Current)</small>
+</td>
+<td align="center" width="20%">
+<img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nextjs/nextjs-original.svg" width="40" height="40"/>
+<br/><b>Next.js</b>
+<br/><small>(Catalyst)</small>
 </td>
 <td align="center" width="20%">
 <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/typescript/typescript-original.svg" width="40" height="40"/>
@@ -142,12 +148,10 @@ graph TB
 <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/vitejs/vitejs-original.svg" width="40" height="40"/>
 <br/><b>Vite</b>
 </td>
-<td align="center" width="20%">
-<img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nginx/nginx-original.svg" width="40" height="40"/>
-<br/><b>Nginx</b>
-</td>
 </tr>
 </table>
+
+> **Note:** The project currently uses Vue.js 3, but a BigCommerce Catalyst (Next.js/React) frontend setup is also available. See [CATALYST_SETUP.md](CATALYST_SETUP.md) for details.
 
 ---
 
@@ -193,11 +197,25 @@ python manage.py populate_products
 python manage.py createsuperuser
 python manage.py runserver
 
-# Frontend Setup (in another terminal)
+# Frontend Setup (Vue.js - in another terminal)
 cd frontend
 npm install
 npm run dev
 ```
+
+### **Option 3: Catalyst Frontend (Next.js/React)**
+
+For a modern Next.js frontend using BigCommerce Catalyst:
+
+```bash
+# Run the setup script
+chmod +x setup-catalyst.sh
+./setup-catalyst.sh
+
+# Or follow the manual setup in CATALYST_SETUP.md
+```
+
+See [CATALYST_SETUP.md](CATALYST_SETUP.md) for detailed Catalyst setup instructions.
 
 ---
 
