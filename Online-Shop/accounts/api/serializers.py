@@ -64,7 +64,7 @@ class LoginSerializer(serializers.Serializer):
         if not user.is_active:
             raise serializers.ValidationError("User account is disabled")
 
-        # لاگین موفق
+
         data['user'] = user
         return data
 
