@@ -77,6 +77,11 @@ services:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - ALLOWED_HOSTS=*
+      - POSTGRES_DB=onlineshop
+      - POSTGRES_USER=onlineshop
+      - POSTGRES_PASSWORD=onlineshop
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
     depends_on:
       db:
         condition: service_healthy
@@ -97,6 +102,11 @@ services:
       - PYTHONPATH=/app
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - POSTGRES_DB=onlineshop
+      - POSTGRES_USER=onlineshop
+      - POSTGRES_PASSWORD=onlineshop
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
     depends_on:
       redis:
         condition: service_healthy
@@ -117,6 +127,11 @@ services:
       - PYTHONPATH=/app
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - POSTGRES_DB=onlineshop
+      - POSTGRES_USER=onlineshop
+      - POSTGRES_PASSWORD=onlineshop
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
     depends_on:
       redis:
         condition: service_healthy
