@@ -6,6 +6,8 @@ services:
       - POSTGRES_DB=onlineshop
       - POSTGRES_USER=onlineshop
       - POSTGRES_PASSWORD=onlineshop
+    ports:
+      - "5439:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -13,6 +15,36 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    networks:
+      - onlineshop-network
+
+  db-import:
+    container_name: onlineshop_db_import
+    image: postgres:15-alpine
+    restart: "no"
+    environment:
+      - PGHOST=db
+      - PGDATABASE=onlineshop
+      - PGUSER=onlineshop
+      - PGPASSWORD=onlineshop
+    volumes:
+      - ./backup_20251221_142048.sql:/backup.sql:ro
+    command: >
+      sh -c "
+      echo 'Waiting for database to be ready...' &&
+      until pg_isready -h db -U onlineshop; do sleep 1; done &&
+      echo 'Database is ready. Checking backup file...' &&
+      if [ -s /backup.sql ]; then
+        echo 'Importing backup file...' &&
+        psql -h db -U onlineshop -d onlineshop -f /backup.sql &&
+        echo 'Backup imported successfully!'
+      else
+        echo 'Warning: Backup file is empty or does not exist. Skipping import.'
+      fi
+      "
+    depends_on:
+      db:
+        condition: service_healthy
     networks:
       - onlineshop-network
 
