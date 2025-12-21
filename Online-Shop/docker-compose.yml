@@ -20,7 +20,7 @@ services:
     container_name: onlineshop_frontend
     build: ../frontend
     ports:
-      - "3000:3000"
+      - "3030:3000"
     environment:
       - VITE_BACKEND_URL=http://web:8000
     depends_on:
