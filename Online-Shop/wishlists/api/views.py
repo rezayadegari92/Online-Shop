@@ -87,7 +87,7 @@ class WishlistAddView(APIView):
     summary="Remove product from wishlist",
     description="Remove a product from authenticated user's wishlist by product ID",
     responses={
-        204: {"description": "Product removed from wishlist"},
+        200: {"description": "Product removed from wishlist"},
         404: {"description": "Product not in wishlist"},
     },
 )
@@ -104,7 +104,7 @@ class WishlistRemoveView(APIView):
             wishlist.delete()
             return Response(
                 {"message": "Product removed from wishlist"},
-                status=status.HTTP_204_NO_CONTENT,
+                status=status.HTTP_200_OK,
             )
         except Wishlist.DoesNotExist:
             return Response(
@@ -207,7 +207,7 @@ class WishlistCheckView(APIView):
     tags=["Wishlist"],
     summary="Clear all wishlist items",
     description="Remove all products from authenticated user's wishlist",
-    responses={204: {"description": "Wishlist cleared"}},
+    responses={200: {"description": "Wishlist cleared"}},
 )
 class WishlistClearView(APIView):
     """Clear all items from user's wishlist."""
@@ -222,5 +222,5 @@ class WishlistClearView(APIView):
 
         return Response(
             {"message": f"Cleared {count} items from wishlist"},
-            status=status.HTTP_204_NO_CONTENT,
+            status=status.HTTP_200_OK,
         )

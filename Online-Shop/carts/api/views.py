@@ -194,8 +194,12 @@ class CartItemUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
         cart = instance.cart
         self.perform_destroy(instance)
 
-        # If cart is empty, optionally delete it
+        # If cart is empty, clear discount and optionally delete it
         if not cart.items.exists():
+            cart.discount_code = None
+            cart.discount_percent = 0
+            cart.save()
+            # Optionally delete empty cart
             cart.delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -220,6 +224,11 @@ class CartRetrieveView(APIView):
 
     def get(self, request):
         cart, _ = Cart.objects.get_or_create(user=request.user)
+        # Clear discount if cart is empty
+        if not cart.items.exists():
+            cart.discount_code = None
+            cart.discount_percent = 0
+            cart.save()
         serializer = CartSerializer(cart)
         return Response(serializer.data)
 
@@ -399,9 +408,10 @@ class CheckoutView(APIView):
                 # محاسبه قیمت
                 order.calculate_total_price()
 
-                # خالی کردن سبد خرید
+                # خالی کردن سبد خرید و پاک کردن کد تخفیف
                 cart.items.all().delete()
                 cart.discount_code = None
+                cart.discount_percent = 0
                 cart.save()
 
                 return Response(
@@ -447,6 +457,11 @@ class CartView(APIView, CartMixin):
         try:
             cart_data = self.get_cart_data(request)
             if request.user.is_authenticated:
+                # Clear discount if cart is empty
+                if isinstance(cart_data, Cart) and not cart_data.items.exists():
+                    cart_data.discount_code = None
+                    cart_data.discount_percent = 0
+                    cart_data.save()
                 serializer = CartSerializer(cart_data, context={"request": request})
                 return Response(serializer.data)
             else:
@@ -605,6 +620,11 @@ class CartView(APIView, CartMixin):
                         cart_item.save()
                     else:
                         cart_item.delete()
+                        # Clear discount if cart becomes empty
+                        if not cart.items.exists():
+                            cart.discount_code = None
+                            cart.discount_percent = 0
+                            cart.save()
                 except CartItem.DoesNotExist:
                     return Response(
                         {"error": "Item not found in cart"},
@@ -662,6 +682,11 @@ class CartView(APIView, CartMixin):
                     )
 
                 CartItem.objects.filter(cart=cart, product_id=product_id).delete()
+                # Clear discount if cart becomes empty
+                if not cart.items.exists():
+                    cart.discount_code = None
+                    cart.discount_percent = 0
+                    cart.save()
                 serializer = CartSerializer(cart, context={"request": request})
                 return Response(serializer.data)
             else:

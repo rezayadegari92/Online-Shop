@@ -28,8 +28,15 @@ class CartItemSerializer(serializers.ModelSerializer):
     product_price = serializers.DecimalField(
         source="product.price", max_digits=10, decimal_places=2, read_only=True
     )
-    product_image = serializers.ImageField(source="product.image", read_only=True)
+    product_image = serializers.SerializerMethodField()
     total_price = serializers.SerializerMethodField()
+    
+    def get_product_image(self, obj):
+        # Get image from product's first ProductImage or return None
+        if obj.product.images.exists():
+            first_image = obj.product.images.first()
+            return first_image.image.url
+        return None
 
     class Meta:
         model = CartItem
