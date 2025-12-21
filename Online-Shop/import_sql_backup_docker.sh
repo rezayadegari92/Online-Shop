@@ -1,6 +1,6 @@
 #!/bin/bash
-# Alternative method: Import SQL backup using Docker and psql
-# This method is more reliable for complex SQL dumps
+# Import SQL backup using psql directly (run from inside web container)
+# This script should be run from inside the Docker container
 
 if [ $# -eq 0 ]; then
     echo "Usage: ./import_sql_backup_docker.sh <backup_file.sql>"
@@ -18,24 +18,23 @@ if [ ! -f "$SQL_FILE" ]; then
 fi
 
 echo "=========================================="
-echo "Importing SQL backup using Docker"
+echo "Importing SQL backup"
 echo "=========================================="
 echo "File: $SQL_FILE"
 echo ""
 
-# Check if docker compose is available
-if command -v docker-compose &> /dev/null; then
-    DOCKER_COMPOSE="docker-compose"
-elif command -v docker &> /dev/null && docker compose version &> /dev/null; then
-    DOCKER_COMPOSE="docker compose"
-else
-    echo "Error: docker-compose or docker compose not found"
-    exit 1
-fi
+# Database connection parameters
+DB_NAME="onlineshop"
+DB_USER="onlineshop"
+DB_HOST="db"
+DB_PORT="5432"
 
-# Import SQL file
+# Export password for psql
+export PGPASSWORD="onlineshop"
+
+# Import SQL file using psql
 echo "Importing SQL file into database..."
-$DOCKER_COMPOSE exec -T db psql -U onlineshop -d onlineshop < "$SQL_FILE"
+psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f "$SQL_FILE"
 
 if [ $? -eq 0 ]; then
     echo ""
@@ -45,4 +44,7 @@ else
     echo "✗ Error importing SQL backup"
     exit 1
 fi
+
+# Unset password
+unset PGPASSWORD
 
