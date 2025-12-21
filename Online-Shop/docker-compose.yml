@@ -1,64 +1,49 @@
+x-common-env: &common-env
+  POSTGRES_DB: onlineshop
+  POSTGRES_USER: onlineshop
+  POSTGRES_PASSWORD: onlineshop
+  POSTGRES_HOST: db
+  POSTGRES_PORT: 5432
+
+x-django-env: &django-env
+  <<: *common-env
+  DJANGO_SETTINGS_MODULE: core.settings
+  PYTHONPATH: /app
+  CELERY_BROKER_URL: redis://redis:6379/0
+  CELERY_RESULT_BACKEND: redis://redis:6379/0
+
+x-healthcheck: &healthcheck
+  interval: 5s
+  timeout: 3s
+  retries: 5
+
 services:
   db:
     container_name: onlineshop_db
     image: postgres:15-alpine
     environment:
-      - POSTGRES_DB=onlineshop
-      - POSTGRES_USER=onlineshop
-      - POSTGRES_PASSWORD=onlineshop
+      POSTGRES_DB: onlineshop
+      POSTGRES_USER: onlineshop
+      POSTGRES_PASSWORD: onlineshop
     ports:
       - "5439:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U onlineshop"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
+      <<: *healthcheck
     networks:
       - onlineshop-network
 
-  db-import:
-    container_name: onlineshop_db_import
-    image: postgres:15-alpine
-    restart: "no"
-    environment:
-      - PGHOST=db
-      - PGDATABASE=onlineshop
-      - PGUSER=onlineshop
-      - PGPASSWORD=onlineshop
-    volumes:
-      - ./backup_20251221_151306.sql:/backup.sql:ro
-    command: >
-      sh -c "
-      echo 'Waiting for database to be ready...' &&
-      until pg_isready -h db -U onlineshop; do sleep 1; done &&
-      echo 'Database is ready. Checking backup file...' &&
-      if [ -s /backup.sql ]; then
-        echo 'Importing backup file...' &&
-        psql -h db -U onlineshop -d onlineshop -f /backup.sql &&
-        echo 'Backup imported successfully!'
-      else
-        echo 'Warning: Backup file is empty or does not exist. Skipping import.'
-      fi
-      "
-    depends_on:
-      db:
-        condition: service_healthy
+  redis:
+    container_name: onlineshop_redis
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      <<: *healthcheck
     networks:
       - onlineshop-network
 
-  frontend:
-    container_name: onlineshop_frontend
-    build: ../frontend
-    ports:
-      - "3030:3000"
-    environment:
-      - VITE_BACKEND_URL=http://web:8000
-    depends_on:
-      - web
-    networks:
-      - onlineshop-network
   web:
     container_name: onlineshop_web
     build: .
@@ -71,17 +56,9 @@ services:
       - .:/app
       - media_volume:/app/media
     environment:
-      - DJANGO_SETTINGS_MODULE=core.settings
-      - PYTHONPATH=/app
-      - DEBUG=1
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - ALLOWED_HOSTS=*
-      - POSTGRES_DB=onlineshop
-      - POSTGRES_USER=onlineshop
-      - POSTGRES_PASSWORD=onlineshop
-      - POSTGRES_HOST=db
-      - POSTGRES_PORT=5432
+      <<: *django-env
+      DEBUG: "1"
+      ALLOWED_HOSTS: "*"
     depends_on:
       db:
         condition: service_healthy
@@ -98,15 +75,7 @@ services:
     volumes:
       - .:/app
     environment:
-      - DJANGO_SETTINGS_MODULE=core.settings
-      - PYTHONPATH=/app
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - POSTGRES_DB=onlineshop
-      - POSTGRES_USER=onlineshop
-      - POSTGRES_PASSWORD=onlineshop
-      - POSTGRES_HOST=db
-      - POSTGRES_PORT=5432
+      <<: *django-env
     depends_on:
       redis:
         condition: service_healthy
@@ -123,15 +92,7 @@ services:
     volumes:
       - .:/app
     environment:
-      - DJANGO_SETTINGS_MODULE=core.settings
-      - PYTHONPATH=/app
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - POSTGRES_DB=onlineshop
-      - POSTGRES_USER=onlineshop
-      - POSTGRES_PASSWORD=onlineshop
-      - POSTGRES_HOST=db
-      - POSTGRES_PORT=5432
+      <<: *django-env
     depends_on:
       redis:
         condition: service_healthy
@@ -140,14 +101,15 @@ services:
     networks:
       - onlineshop-network
 
-  redis:
-    container_name: onlineshop_redis
-    image: redis:7-alpine
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
+  frontend:
+    container_name: onlineshop_frontend
+    build: ../frontend
+    ports:
+      - "3030:3000"
+    environment:
+      VITE_BACKEND_URL: http://web:8000
+    depends_on:
+      - web
     networks:
       - onlineshop-network
 
