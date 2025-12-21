@@ -28,7 +28,7 @@ services:
       - PGUSER=onlineshop
       - PGPASSWORD=onlineshop
     volumes:
-      - ./backup_20251221_142048.sql:/backup.sql:ro
+      - ./backup_20251221_151306.sql:/backup.sql:ro
     command: >
       sh -c "
       echo 'Waiting for database to be ready...' &&
