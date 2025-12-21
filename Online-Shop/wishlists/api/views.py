@@ -27,7 +27,7 @@ class WishlistListView(APIView):
         """Get user's wishlist."""
         wishlists = Wishlist.objects.filter(user=request.user).select_related(
             "product", "product__brand", "product__category"
-        )
+        ).prefetch_related("product__images")
         serializer = WishlistSerializer(
             wishlists, many=True, context={"request": request}
         )
@@ -217,8 +217,10 @@ class WishlistClearView(APIView):
 
     def delete(self, request):
         """Clear user's wishlist."""
-        count = Wishlist.objects.filter(user=request.user).count()
-        Wishlist.objects.filter(user=request.user).delete()
+        # Use single query with count before delete
+        wishlist_qs = Wishlist.objects.filter(user=request.user)
+        count = wishlist_qs.count()
+        wishlist_qs.delete()
 
         return Response(
             {"message": f"Cleared {count} items from wishlist"},

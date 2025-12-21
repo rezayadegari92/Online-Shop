@@ -78,7 +78,9 @@ class ProductListView(APIView):
         brand_id = request.GET.get("brand")
         sort_by = request.GET.get("sort", "id")
 
-        products = Product.objects.select_related("brand", "category").all()
+        products = Product.objects.select_related(
+            "brand", "category"
+        ).prefetch_related("images").all()
 
         if search_query:
             products = products.filter(
@@ -139,7 +141,13 @@ class ProductDetailView(APIView):
     )
     def get(self, request, pk):
         try:
-            product = Product.objects.get(pk=pk)
+            product = Product.objects.select_related(
+                "brand", "category"
+            ).prefetch_related(
+                "images",
+                "comments__author",
+                "ratings__user"
+            ).get(pk=pk)
         except Product.DoesNotExist:
             return Response(
                 {"detail": "Product not found."},
@@ -152,7 +160,7 @@ class ProductDetailView(APIView):
     @product_detail_post_schema()
     def post(self, request, pk):
         try:
-            product = Product.objects.get(pk=pk)
+            product = Product.objects.select_related("brand", "category").get(pk=pk)
         except Product.DoesNotExist:
             return Response(
                 {"detail": "Product not found."},
@@ -197,7 +205,10 @@ class CategoryListView(APIView):
         "category_list", timeout=settings.CACHE_TTL.get("CATEGORY_LIST", 1800)
     )
     def get(self, request):
-        roots = Category.objects.filter(parent=None)
+        roots = Category.objects.filter(parent=None).prefetch_related(
+            "subcategories",
+            "subcategories__subcategories"
+        )
         serializer = CategorySerializer(roots, many=True, context={"request": request})
         return Response(serializer.data)
 
@@ -224,6 +235,7 @@ class CategoryProductsView(APIView):
         category_ids = get_category_descendants(category)
         products = (
             Product.objects.select_related("brand", "category")
+            .prefetch_related("images")
             .filter(category_id__in=category_ids)
             .order_by("id")
         )
@@ -249,6 +261,7 @@ class TopRatedProductsView(APIView):
     def get(self, request):
         products = (
             Product.objects.select_related("brand", "category")
+            .prefetch_related("images")
             .annotate(rating_count=Count("ratings"), avg_rating=Avg("ratings__value"))
             .filter(rating_count__gt=0)
             .order_by("-avg_rating", "id")
@@ -299,7 +312,10 @@ class BrandProductsView(APIView):
             )
 
         products = (
-            brand.products.select_related("brand", "category").all().order_by("id")
+            brand.products.select_related("brand", "category")
+            .prefetch_related("images")
+            .all()
+            .order_by("id")
         )
         paginator = CustomPageNumberPagination()
         paginated_products = paginator.paginate_queryset(products, request)
@@ -322,6 +338,7 @@ class DiscountedProductList(APIView):
     def get(self, request):
         products = (
             Product.objects.select_related("brand", "category")
+            .prefetch_related("images")
             .exclude(discount_percent=0)
             .order_by("-discount_percent", "id")
         )
@@ -340,7 +357,13 @@ class DiscountedProductDetailView(APIView):
 
     @discounted_product_detail_get_schema()
     def get(self, request, pk):
-        product = get_object_or_404(Product, pk=pk, discount_percent__gt=0)
+        product = get_object_or_404(
+            Product.objects.select_related("brand", "category").prefetch_related(
+                "images", "comments__author", "ratings__user"
+            ),
+            pk=pk,
+            discount_percent__gt=0
+        )
         serializer = ProductSerializer(product, context={"request": request})
         return Response(serializer.data)
 
@@ -389,7 +412,9 @@ class ShuffledBannerProductsView(APIView):
     def get(self, request):
         limit = int(request.GET.get("limit", 10))
 
-        products = Product.objects.select_related("brand", "category").filter(
+        products = Product.objects.select_related("brand", "category").prefetch_related(
+            "images"
+        ).filter(
             banner_image__isnull=False
         ).exclude(banner_image="")
 

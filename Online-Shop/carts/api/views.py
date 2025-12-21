@@ -99,7 +99,9 @@ class CartItemListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         if self.request.user.is_authenticated:
             cart, _ = Cart.objects.get_or_create(user=self.request.user)
-            return cart.items.all()
+            return cart.items.select_related(
+                "product", "product__brand", "product__category"
+            ).prefetch_related("product__images").all()
         return CartItem.objects.none()
 
     def create(self, request, *args, **kwargs):
@@ -152,6 +154,13 @@ class CartItemListCreateView(generics.ListCreateAPIView):
                 cart_item.quantity = total_quantity
                 cart_item.save()
 
+        # Reload cart with optimized queries
+        cart = Cart.objects.prefetch_related(
+            "items__product",
+            "items__product__brand",
+            "items__product__category",
+            "items__product__images"
+        ).get(id=cart.id)
         # Return the full cart
         cart_serializer = CartSerializer(cart, context={"request": request})
         return Response(cart_serializer.data, status=status.HTTP_201_CREATED)
@@ -186,7 +195,9 @@ class CartItemUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         if self.request.user.is_authenticated:
             cart, _ = Cart.objects.get_or_create(user=self.request.user)
-            return cart.items.all()
+            return cart.items.select_related(
+                "product", "product__brand", "product__category"
+            ).prefetch_related("product__images").all()
         return CartItem.objects.none()
 
     def destroy(self, request, *args, **kwargs):
@@ -199,7 +210,6 @@ class CartItemUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
             cart.discount_code = None
             cart.discount_percent = 0
             cart.save()
-            # Optionally delete empty cart
             cart.delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -229,7 +239,14 @@ class CartRetrieveView(APIView):
             cart.discount_code = None
             cart.discount_percent = 0
             cart.save()
-        serializer = CartSerializer(cart)
+        # Optimize query with prefetch_related
+        cart = Cart.objects.prefetch_related(
+            "items__product",
+            "items__product__brand",
+            "items__product__category",
+            "items__product__images"
+        ).get(id=cart.id)
+        serializer = CartSerializer(cart, context={"request": request})
         return Response(serializer.data)
 
 
@@ -261,6 +278,13 @@ class ApplyDiscountView(APIView, CartMixin):
             cart.discount_percent = discount_code.discount_percent
             cart.save()
 
+            # Reload cart with optimized queries
+            cart = Cart.objects.prefetch_related(
+                "items__product",
+                "items__product__brand",
+                "items__product__category",
+                "items__product__images"
+            ).get(id=cart.id)
             # Return updated cart with discount applied
             cart_serializer = CartSerializer(cart, context={"request": request})
             return Response(
@@ -327,7 +351,11 @@ class CheckoutView(APIView):
 
         # بررسی سبد خرید
         try:
-            cart = Cart.objects.get(user=user)
+            cart = Cart.objects.prefetch_related(
+                "items__product",
+                "items__product__brand",
+                "items__product__category"
+            ).get(user=user)
         except Cart.DoesNotExist:
             return Response({"detail": "سبد خرید پیدا نشد!"}, status=400)
 
@@ -377,7 +405,8 @@ class CheckoutView(APIView):
                 )
 
                 # انتقال آیتم‌ها از سبد خرید و کاهش موجودی
-                for item in cart.items.select_related("product"):
+                # Items are already prefetched from cart query above
+                for item in cart.items.all():
                     # Get locked product to ensure we have latest data
                     product = Product.objects.select_for_update().get(
                         id=item.product.id
@@ -462,6 +491,13 @@ class CartView(APIView, CartMixin):
                     cart_data.discount_code = None
                     cart_data.discount_percent = 0
                     cart_data.save()
+                # Optimize query with prefetch_related
+                cart_data = Cart.objects.prefetch_related(
+                    "items__product",
+                    "items__product__brand",
+                    "items__product__category",
+                    "items__product__images"
+                ).get(id=cart_data.id)
                 serializer = CartSerializer(cart_data, context={"request": request})
                 return Response(serializer.data)
             else:
@@ -525,7 +561,9 @@ class CartView(APIView, CartMixin):
                     if not cart:
                         cart = Cart.objects.create(user=request.user)
 
-                    cart_item, created = CartItem.objects.get_or_create(
+                    cart_item, created = CartItem.objects.select_related(
+                        "product", "product__brand", "product__category"
+                    ).get_or_create(
                         cart=cart, product=product, defaults={"quantity": quantity}
                     )
 
@@ -614,7 +652,9 @@ class CartView(APIView, CartMixin):
                     )
 
                 try:
-                    cart_item = CartItem.objects.get(cart=cart, product_id=product_id)
+                    cart_item = CartItem.objects.select_related(
+                        "product", "product__brand", "product__category"
+                    ).get(cart=cart, product_id=product_id)
                     if quantity > 0:
                         cart_item.quantity = quantity
                         cart_item.save()
@@ -631,6 +671,13 @@ class CartView(APIView, CartMixin):
                         status=status.HTTP_404_NOT_FOUND,
                     )
 
+                # Reload cart with optimized queries
+                cart = Cart.objects.prefetch_related(
+                    "items__product",
+                    "items__product__brand",
+                    "items__product__category",
+                    "items__product__images"
+                ).get(id=cart.id)
                 serializer = CartSerializer(cart, context={"request": request})
                 return Response(serializer.data)
             else:
@@ -687,6 +734,13 @@ class CartView(APIView, CartMixin):
                     cart.discount_code = None
                     cart.discount_percent = 0
                     cart.save()
+                # Reload cart with optimized queries
+                cart = Cart.objects.prefetch_related(
+                    "items__product",
+                    "items__product__brand",
+                    "items__product__category",
+                    "items__product__images"
+                ).get(id=cart.id)
                 serializer = CartSerializer(cart, context={"request": request})
                 return Response(serializer.data)
             else:

@@ -73,10 +73,11 @@ class Product(models.Model):
         return self.price
 
     def average_rating(self):
-        ratings = self.ratings.all()
-        if ratings.exists():
-            avg = sum(r.value for r in ratings) / ratings.count()
-            return round(avg, 1)
+        # Use aggregation for better performance
+        from django.db.models import Avg
+        avg_rating = self.ratings.aggregate(avg=Avg('value'))['avg']
+        if avg_rating is not None:
+            return round(avg_rating, 1)
         return 0
 
     def __str__(self):

@@ -15,9 +15,14 @@ class ProductSerializer(serializers.ModelSerializer):
         fields = ["id", "name", "price", "discounted_price", "image_url"]
 
     def get_image_url(self, obj):
-        if obj.images.exists():
+        # Use prefetched images if available
+        images = getattr(obj, '_prefetched_objects_cache', {}).get('images', None)
+        if images:
+            first_image = images[0] if images else None
+        else:
             first_image = obj.images.first()
-            # Return relative URL to work with nginx proxy
+        
+        if first_image:
             return first_image.image.url
         return None
 
@@ -32,9 +37,14 @@ class CartItemSerializer(serializers.ModelSerializer):
     total_price = serializers.SerializerMethodField()
     
     def get_product_image(self, obj):
-        # Get image from product's first ProductImage or return None
-        if obj.product.images.exists():
+        # Get image from product's prefetched images or return None
+        images = getattr(obj.product, '_prefetched_objects_cache', {}).get('images', None)
+        if images:
+            first_image = images[0] if images else None
+        else:
             first_image = obj.product.images.first()
+        
+        if first_image:
             return first_image.image.url
         return None
 
@@ -105,8 +115,10 @@ class CartSerializer(serializers.ModelSerializer):
         ]
 
     def get_total_price(self, obj):
+        # Use prefetched items to avoid N+1 queries
+        items = obj.items.all() if hasattr(obj, '_prefetched_objects_cache') else obj.items.select_related('product').all()
         return sum(
-            item.quantity * item.product.discounted_price for item in obj.items.all()
+            item.quantity * item.product.discounted_price for item in items
         )
 
     def get_final_price(self, obj):

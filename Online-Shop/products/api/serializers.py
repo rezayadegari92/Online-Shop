@@ -1,5 +1,6 @@
 from decimal import ROUND_HALF_UP, Decimal
 
+from django.db.models import Min, Max
 from rest_framework import serializers
 
 from products.models import Brand, Category, Comment, Product, ProductImage, Rating
@@ -109,20 +110,28 @@ class ProductSerializer(serializers.ModelSerializer):
         return obj.average_rating()
 
     def get_ratings(self, obj):
-        ratings = obj.ratings.all()
+        # Use prefetched ratings if available to avoid N+1 queries
+        ratings = getattr(obj, '_prefetched_objects_cache', {}).get('ratings', None)
+        if ratings is None:
+            ratings = obj.ratings.select_related('user').all()
         return ProductRatingSerializer(ratings, many=True, context=self.context).data
 
     def get_final_price(self, obj):
         return obj.final_price
 
     def get_price_range(self, obj):
-        # پیدا کردن مینیمم و ماکزیمم قیمت کل محصولات
-        prices = Product.objects.values_list("price", flat=True)
-        if prices:
-            min_price = min(prices)
-            max_price = max(prices)
-            return {"min": min_price, "max": max_price}
-        return {"min": 0, "max": 0}
+        # Use aggregation instead of loading all prices into memory
+        # Cache this at class level to avoid repeated queries
+        if not hasattr(ProductSerializer, '_price_range_cache'):
+            price_range = Product.objects.aggregate(
+                min_price=Min("price"),
+                max_price=Max("price")
+            )
+            ProductSerializer._price_range_cache = {
+                "min": price_range.get("min_price", 0) or 0,
+                "max": price_range.get("max_price", 0) or 0
+            }
+        return ProductSerializer._price_range_cache
 
     def get_banner_image(self, obj):
         request = self.context.get("request")
@@ -153,8 +162,11 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = ("id", "name", "image", "subcategories")
 
     def get_subcategories(self, obj):
-        qs = obj.subcategories.all()
-        return CategorySerializer(qs, many=True, context=self.context).data
+        # Use prefetched subcategories if available to avoid N+1 queries
+        subcategories = getattr(obj, '_prefetched_objects_cache', {}).get('subcategories', None)
+        if subcategories is None:
+            subcategories = obj.subcategories.all()
+        return CategorySerializer(subcategories, many=True, context=self.context).data
 
     def get_image(self, obj):
         request = self.context.get("request")

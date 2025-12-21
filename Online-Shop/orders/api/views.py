@@ -17,7 +17,13 @@ class OrderListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Order.objects.filter(user=self.request.user).order_by('-created_at')
+        return Order.objects.filter(user=self.request.user).select_related(
+            "user", "discount_code"
+        ).prefetch_related(
+            "items__product",
+            "items__product__brand",
+            "items__product__category"
+        ).order_by('-created_at')
 
 @extend_schema(
     responses={200: OrderSchemaSerializer},
@@ -38,4 +44,10 @@ class OrderDetailView(generics.RetrieveAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Order.objects.filter(user=self.request.user)
+        return Order.objects.filter(user=self.request.user).select_related(
+            "user", "discount_code"
+        ).prefetch_related(
+            "items__product",
+            "items__product__brand",
+            "items__product__category"
+        )

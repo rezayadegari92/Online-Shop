@@ -29,7 +29,6 @@ class AddressListCreateView(generics.ListCreateAPIView):
     authentication_classes = [JWTAuthentication]
 
     def get_queryset(self):
-        print("User from JWT:", self.request.user)
         return Address.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
