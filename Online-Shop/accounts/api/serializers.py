@@ -9,19 +9,27 @@ User = get_user_model()
 
 class CustomerSignupSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, validators=[validate_password])
+    password2 = serializers.CharField(write_only=True, label="Confirm Password")
     username = serializers.CharField(required=False, allow_blank=True)
     birth_date = serializers.DateField(required=True)
     address = AddressSerializer(required=False)
     
     class Meta:
         model = User
-        fields = ["email", "username","first_name", "last_name", "password","birth_date", "address",]
+        fields = ["email", "username","first_name", "last_name", "password", "password2","birth_date", "address",]
 
         extra_kwargs = { 'address': {'required': False} }
 
     def validate(self, attrs):
         email = attrs.get("email")
         username = attrs.get("username")
+        password = attrs.get("password")
+        password2 = attrs.get("password2")
+        
+        # Validate password confirmation
+        if password and password2 and password != password2:
+            raise serializers.ValidationError({"password2": "Passwords do not match."})
+        
         if not username and email:
             base = email.split("@")[0]
             candidate = base
@@ -30,6 +38,9 @@ class CustomerSignupSerializer(serializers.ModelSerializer):
                 idx += 1
                 candidate = f"{base}{idx}"
             attrs["username"] = candidate
+        
+        # Remove password2 from validated_data as it's not a model field
+        attrs.pop("password2", None)
         return attrs
 
 
@@ -90,3 +101,43 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'email': {'required': False},
             'username': {'required': False}
         }
+
+
+class ForgotPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True)
+
+
+class VerifyForgotPasswordOTPSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True)
+    otp_code = serializers.CharField(required=True)
+
+
+class ResetPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True)
+    otp_code = serializers.CharField(required=True)
+    new_password = serializers.CharField(write_only=True, validators=[validate_password])
+    new_password2 = serializers.CharField(write_only=True, label="Confirm New Password")
+    
+    def validate(self, attrs):
+        new_password = attrs.get("new_password")
+        new_password2 = attrs.get("new_password2")
+        
+        if new_password and new_password2 and new_password != new_password2:
+            raise serializers.ValidationError({"new_password2": "Passwords do not match."})
+        
+        return attrs
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(write_only=True, required=True)
+    new_password = serializers.CharField(write_only=True, validators=[validate_password], required=True)
+    new_password2 = serializers.CharField(write_only=True, label="Confirm New Password", required=True)
+    
+    def validate(self, attrs):
+        new_password = attrs.get("new_password")
+        new_password2 = attrs.get("new_password2")
+        
+        if new_password and new_password2 and new_password != new_password2:
+            raise serializers.ValidationError({"new_password2": "Passwords do not match."})
+        
+        return attrs
