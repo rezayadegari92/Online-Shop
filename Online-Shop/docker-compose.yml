@@ -17,11 +17,6 @@ x-healthcheck: &healthcheck
   timeout: 3s
   retries: 5
 
-x-ulimits: &ulimits
-  nofile:
-    soft: 65536
-    hard: 65536
-
 services:
   db:
     container_name: onlineshop_db
@@ -64,8 +59,6 @@ services:
       <<: *django-env
       DEBUG: "1"
       ALLOWED_HOSTS: "*"
-    ulimits:
-      <<: *ulimits
     depends_on:
       db:
         condition: service_healthy
@@ -83,8 +76,6 @@ services:
       - .:/app
     environment:
       <<: *django-env
-    ulimits:
-      <<: *ulimits
     depends_on:
       redis:
         condition: service_healthy
@@ -102,8 +93,6 @@ services:
       - .:/app
     environment:
       <<: *django-env
-    ulimits:
-      <<: *ulimits
     depends_on:
       redis:
         condition: service_healthy
