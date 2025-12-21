@@ -53,6 +53,7 @@ class ProductSerializer(serializers.ModelSerializer):
         max_digits=10, decimal_places=2, read_only=True
     )
     price_range = serializers.SerializerMethodField(read_only=True)  # ✅ اضافه شده
+    banner_image = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Product
@@ -73,6 +74,7 @@ class ProductSerializer(serializers.ModelSerializer):
             "comments",
             "ratings",
             "price_range",
+            "banner_image",
         )
         read_only_fields = (
             "id",
@@ -122,6 +124,15 @@ class ProductSerializer(serializers.ModelSerializer):
             return {"min": min_price, "max": max_price}
         return {"min": 0, "max": 0}
 
+    def get_banner_image(self, obj):
+        request = self.context.get("request")
+        if obj.banner_image and hasattr(obj.banner_image, "url"):
+            if request is not None:
+                # Use relative URL to work with proxy/nginx
+                return obj.banner_image.url
+            return obj.banner_image.url
+        return None
+
 
 class ProductRatingSerializer(serializers.ModelSerializer):
     user = serializers.StringRelatedField(read_only=True)
@@ -135,11 +146,21 @@ class ProductRatingSerializer(serializers.ModelSerializer):
 
 class CategorySerializer(serializers.ModelSerializer):
     subcategories = serializers.SerializerMethodField()
+    image = serializers.SerializerMethodField()
 
     class Meta:
         model = Category
-        fields = ("id", "name", "subcategories")
+        fields = ("id", "name", "image", "subcategories")
 
     def get_subcategories(self, obj):
         qs = obj.subcategories.all()
         return CategorySerializer(qs, many=True, context=self.context).data
+
+    def get_image(self, obj):
+        request = self.context.get("request")
+        if obj.image and hasattr(obj.image, "url"):
+            if request is not None:
+                # Use relative URL to work with proxy/nginx
+                return obj.image.url
+            return obj.image.url
+        return None

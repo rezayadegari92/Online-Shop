@@ -8,6 +8,9 @@ User = get_user_model()
 
 class Category(models.Model):
     name = models.CharField(max_length=100)
+    image = models.ImageField(
+        upload_to="categories/", null=True, blank=True
+    )
     parent = models.ForeignKey(
         "self",
         on_delete=models.CASCADE,
@@ -40,6 +43,9 @@ class Product(models.Model):
     discount_percent = models.IntegerField(default=0)
     category = models.ForeignKey(
         Category, on_delete=models.CASCADE, related_name="products"
+    )
+    banner_image = models.ImageField(
+        upload_to="products/banners/", null=True, blank=True
     )
 
     details = models.TextField(blank=True, null=True)
