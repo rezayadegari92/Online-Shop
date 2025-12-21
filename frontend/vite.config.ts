@@ -5,9 +5,23 @@ export default defineConfig({
   plugins: [vue()],
   server: {
     port: 3000,
+    host: "0.0.0.0",
     proxy: {
-      "/api": "http://localhost:8000",
-      "/accounts": "http://localhost:8000",
+      "/api": {
+        target: process.env.VITE_BACKEND_URL || "http://localhost:8000",
+        changeOrigin: true,
+        secure: false,
+      },
+      "/accounts": {
+        target: process.env.VITE_BACKEND_URL || "http://localhost:8000",
+        changeOrigin: true,
+        secure: false,
+      },
+      "/media": {
+        target: process.env.VITE_BACKEND_URL || "http://localhost:8000",
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
   preview: {

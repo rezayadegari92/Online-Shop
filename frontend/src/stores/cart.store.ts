@@ -34,14 +34,21 @@ export const useCartStore = defineStore("cart", {
             name: it.product.name,
             price: it.product.discounted_price ?? it.product.price,
             image:
-              it.product.image ||
+              it.product.image_url ||
+              it.product_image ||
               (it.product.images && it.product.images.length > 0
                 ? it.product.images[0].image_url
                 : null),
           }));
 
-          // Store discount information
-          this.discountPercent = data.discount_percent || 0;
+          // Store discount information - clear if cart is empty
+          if (this.items.length === 0) {
+            this.discountPercent = 0;
+            this.discountCode = null;
+          } else {
+            this.discountPercent = data.discount_percent || 0;
+            this.discountCode = data.discount_code || null;
+          }
           this.totalPrice = data.total_price || 0;
           this.finalPrice = data.final_price || 0;
         }

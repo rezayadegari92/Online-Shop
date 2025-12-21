@@ -161,6 +161,7 @@ import { ref, onMounted } from 'vue'
 import api from '../utils/http'
 import { useAuthStore } from '../stores/auth.store'
 import { useRouter } from 'vue-router'
+import { showToast } from '../utils/toast'
 
 const email = ref('')
 const otp_code = ref('')
@@ -184,7 +185,7 @@ function handleOtpInput(event: Event) {
 
 async function submit() {
   if (otp_code.value.length < 6) {
-    alert('Please enter a valid 6-digit verification code')
+    showToast.warning('Please enter a valid 6-digit verification code')
     return
   }
 
@@ -197,11 +198,10 @@ async function submit() {
     auth.setTokens({ access: data.access, refresh: data.refresh })
     localStorage.removeItem('signup_email')
     
-    // Success animation
-    alert('✅ Email verified successfully! Welcome aboard!')
+    showToast.success('✅ Email verified successfully! Welcome aboard!')
     router.replace('/profile')
   } catch (e: any) {
-    alert(e.response?.data?.error || 'OTP verification failed. Please check your code and try again.')
+    showToast.error(e.response?.data?.error || 'OTP verification failed. Please check your code and try again.')
   } finally {
     loading.value = false
   }

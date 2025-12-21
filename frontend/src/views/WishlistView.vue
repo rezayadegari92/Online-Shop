@@ -197,6 +197,7 @@ import { useRouter } from 'vue-router'
 import { useWishlistStore } from '../stores/wishlist.store'
 import { useCartStore } from '../stores/cart.store'
 import { getImageUrl } from '../utils/image'
+import { showToast } from '../utils/toast'
 
 const router = useRouter()
 const wishlistStore = useWishlistStore()
@@ -240,7 +241,9 @@ async function handleRemoveFromWishlist(productId: number) {
   removingId.value = null
 
   if (!result.success) {
-    alert(result.error || 'Failed to remove from wishlist')
+    showToast.error(result.error || 'Failed to remove from wishlist')
+  } else {
+    showToast.success('Removed from wishlist')
   }
 }
 
@@ -252,7 +255,9 @@ async function handleClearWishlist() {
 
   const result = await wishlistStore.clearWishlist()
   if (!result.success) {
-    alert(result.error || 'Failed to clear wishlist')
+    showToast.error(result.error || 'Failed to clear wishlist')
+  } else {
+    showToast.success('Wishlist cleared')
   }
 }
 
@@ -261,14 +266,15 @@ async function handleAddToCart(productId: number) {
   addingToCart.value = productId
   try {
     await cartStore.add(productId, 1)
+    showToast.success('Item added to cart!')
     // Optionally remove from wishlist after adding to cart
     // await wishlistStore.removeFromWishlist(productId)
   } catch (e: any) {
     if (e.response?.status === 401) {
-      alert('Please log in to add items to cart')
+      showToast.warning('Please log in to add items to cart')
       router.push('/login')
     } else {
-      alert(e.response?.data?.detail || 'Failed to add to cart')
+      showToast.error(e.response?.data?.detail || 'Failed to add to cart')
     }
   } finally {
     addingToCart.value = null

@@ -25,6 +25,18 @@ const routes = [
     component: () => import("../views/VerifyOtpView.vue"),
   },
   {
+    path: "/forgot-password",
+    component: () => import("../views/ForgotPasswordView.vue"),
+  },
+  {
+    path: "/verify-forgot-password-otp",
+    component: () => import("../views/VerifyForgotPasswordOTPView.vue"),
+  },
+  {
+    path: "/reset-password",
+    component: () => import("../views/ResetPasswordView.vue"),
+  },
+  {
     path: "/profile",
     component: () => import("../views/ProfileView.vue"),
     meta: { requiresAuth: true },

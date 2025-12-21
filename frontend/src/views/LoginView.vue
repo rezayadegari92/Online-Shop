@@ -51,12 +51,20 @@
 
           <!-- Password Input -->
           <div class="space-y-2">
-            <label class="text-sm font-semibold text-gray-700 flex items-center space-x-2">
-              <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
-              <span>Password</span>
-            </label>
+            <div class="flex items-center justify-between">
+              <label class="text-sm font-semibold text-gray-700 flex items-center space-x-2">
+                <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                <span>Password</span>
+              </label>
+              <router-link 
+                to="/forgot-password"
+                class="text-sm text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 hover:underline"
+              >
+                Forgot Password?
+              </router-link>
+            </div>
             <div class="relative group">
               <input 
                 class="auth-input peer" 
@@ -122,6 +130,7 @@
 import { ref } from 'vue'
 import { useAuthStore } from '../stores/auth.store'
 import { useRouter, useRoute } from 'vue-router'
+import { showToast } from '../utils/toast'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -135,10 +144,11 @@ async function submit() {
   loading.value = true
   try {
     await auth.login({ email_or_username: email_or_username.value, password: password.value })
+    showToast.success('Login successful!')
     const redirect = (route.query.redirect as string) || '/'
     router.replace(redirect)
   } catch (e: any) {
-    alert(e.response?.data?.detail || 'Login failed. Please check your credentials.')
+    showToast.error(e.response?.data?.detail || 'Login failed. Please check your credentials.')
   } finally {
     loading.value = false
   }

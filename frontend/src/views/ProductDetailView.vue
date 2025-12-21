@@ -374,6 +374,7 @@ import { useCartStore } from '../stores/cart.store'
 import { useWishlistStore } from '../stores/wishlist.store'
 import { useAuthStore } from '../stores/auth.store'
 import { getImageUrl } from '../utils/image'
+import { showToast } from '../utils/toast'
 
 const route = useRoute()
 const router = useRouter()
@@ -447,14 +448,13 @@ function decreaseQuantity() {
 async function addToCart() {
   try {
     await cart.add(Number(route.params.id), quantity.value)
-    // Show success notification (you can implement a toast/notification system)
-    alert(`Added ${quantity.value} item(s) to cart!`)
+    showToast.success(`Added ${quantity.value} item(s) to cart!`)
   } catch (e: any) {
     if (e.response?.status === 401) {
-      alert('Please log in to add items to cart')
+      showToast.warning('Please log in to add items to cart')
       router.push('/login')
     } else {
-      alert(e.response?.data?.detail || 'Failed to add to cart')
+      showToast.error(e.response?.data?.detail || 'Failed to add to cart')
     }
   }
 }
@@ -469,13 +469,13 @@ async function submitComment() {
     })
     newComment.value = ''
     await load()
-    alert('Comment posted successfully!')
+    showToast.success('Comment posted successfully!')
   } catch (e: any) {
     if (e.response?.status === 401) {
-      alert('Please log in to post comments')
+      showToast.warning('Please log in to post comments')
       router.push('/login')
     } else {
-      alert(e.response?.data?.detail || 'Failed to post comment')
+      showToast.error(e.response?.data?.detail || 'Failed to post comment')
     }
   }
 }
@@ -487,13 +487,13 @@ async function submitRating() {
       rating: selectedRating.value
     })
     await load()
-    alert('Rating submitted successfully!')
+    showToast.success('Rating submitted successfully!')
   } catch (e: any) {
     if (e.response?.status === 401) {
-      alert('Please log in to rate products')
+      showToast.warning('Please log in to rate products')
       router.push('/login')
     } else {
-      alert(e.response?.data?.detail || 'Failed to submit rating')
+      showToast.error(e.response?.data?.detail || 'Failed to submit rating')
     }
   }
 }
@@ -501,7 +501,7 @@ async function submitRating() {
 // Toggle wishlist
 async function handleToggleWishlist() {
   if (!authStore.isAuthenticated) {
-    alert('Please log in to add items to your wishlist')
+    showToast.warning('Please log in to add items to your wishlist')
     router.push('/login')
     return
   }
@@ -510,14 +510,13 @@ async function handleToggleWishlist() {
   try {
     const result = await wishlistStore.toggleWishlist(product.value.id)
     if (result.success) {
-      // Show success message (you can replace with a toast notification)
-      console.log(result.message)
+      showToast.success(result.message || 'Wishlist updated!')
     } else {
-      alert(result.error || 'Failed to update wishlist')
+      showToast.error(result.error || 'Failed to update wishlist')
     }
   } catch (error) {
     console.error('Error toggling wishlist:', error)
-    alert('Failed to update wishlist')
+    showToast.error('Failed to update wishlist')
   } finally {
     togglingWishlist.value = false
   }

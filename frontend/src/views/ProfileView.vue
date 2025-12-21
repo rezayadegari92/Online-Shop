@@ -173,6 +173,93 @@
           </div>
         </div>
 
+        <!-- Change Password Section -->
+        <div class="profile-card bg-white rounded-2xl shadow-xl overflow-hidden">
+          <div class="bg-gradient-to-r from-red-500 to-pink-500 p-6 text-white">
+            <div class="flex items-center space-x-3">
+              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+              </svg>
+              <h2 class="text-2xl font-bold">Change Password</h2>
+            </div>
+          </div>
+
+          <div class="p-6">
+            <form class="space-y-4" @submit.prevent="changePassword">
+              <div class="form-group">
+                <label class="form-label">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  Current Password
+                </label>
+                <input 
+                  class="form-input" 
+                  v-model="passwordForm.old_password" 
+                  type="password"
+                  placeholder="Enter current password" 
+                  required 
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  New Password
+                </label>
+                <input 
+                  class="form-input" 
+                  v-model="passwordForm.new_password" 
+                  type="password"
+                  placeholder="Enter new password" 
+                  required 
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Confirm New Password
+                </label>
+                <input 
+                  class="form-input" 
+                  v-model="passwordForm.new_password2" 
+                  type="password"
+                  placeholder="Confirm new password" 
+                  required 
+                />
+                <p v-if="passwordForm.new_password2 && passwordForm.new_password !== passwordForm.new_password2" class="text-red-500 text-xs mt-1">
+                  Passwords do not match
+                </p>
+              </div>
+
+              <button 
+                type="submit" 
+                class="btn-gradient w-full"
+                :disabled="changingPassword || passwordForm.new_password !== passwordForm.new_password2"
+              >
+                <span v-if="!changingPassword" class="flex items-center justify-center">
+                  <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                  Change Password
+                </span>
+                <span v-else class="flex items-center justify-center">
+                  <svg class="animate-spin h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Changing Password...
+                </span>
+              </button>
+            </form>
+          </div>
+        </div>
+
         <!-- Addresses Section -->
         <div class="profile-card bg-white rounded-2xl shadow-xl overflow-hidden">
           <div class="bg-gradient-to-r from-green-500 to-emerald-500 p-6 text-white">
@@ -339,6 +426,7 @@
 import { useAuthStore } from '../stores/auth.store'
 import { onMounted, ref, reactive, watch } from 'vue'
 import api from '../utils/http'
+import { showToast } from '../utils/toast'
 const auth = useAuthStore()
 
 const addresses = ref<any[]>([])
@@ -355,6 +443,12 @@ const profileForm = reactive({
   last_name: '', 
   birth_date: '' 
 })
+const passwordForm = reactive({
+  old_password: '',
+  new_password: '',
+  new_password2: ''
+})
+const changingPassword = ref(false)
 
 function getInitials(user: any) {
   if (!user) return '?'
@@ -388,8 +482,9 @@ async function createAddress() {
     Object.assign(f, { street: '', city: '', state: '', postal_code: '', phone_number: '', country: 'Iran' })
     showForm.value = false
     await loadAddresses()
+    showToast.success('Address created successfully!')
   } catch (e: any) {
-    alert(e.response?.data?.detail || e.response?.data?.phone_number?.[0] || 'Failed to create address')
+    showToast.error(e.response?.data?.detail || e.response?.data?.phone_number?.[0] || 'Failed to create address')
   }
 }
 
@@ -397,11 +492,13 @@ async function remove(id: number) {
   if (!confirm('Delete this address?')) return
   await api.delete(`/api/addresses/${id}/`)
   await loadAddresses()
+  showToast.success('Address deleted successfully!')
 }
 
 async function setDefault(id: number) {
   await api.post(`/api/addresses/${id}/set-default/`)
   await loadAddresses()
+  showToast.success('Default address updated!')
 }
 
 function startEdit(address: any) {
@@ -418,8 +515,9 @@ async function updateAddress(id: number) {
     await api.patch(`/api/addresses/${id}/`, editForm)
     editingAddress.value = null
     await loadAddresses()
+    showToast.success('Address updated successfully!')
   } catch (e: any) {
-    alert(e.response?.data?.detail || 'Failed to update address')
+    showToast.error(e.response?.data?.detail || 'Failed to update address')
   }
 }
 
@@ -428,9 +526,32 @@ async function updateProfile() {
     await api.patch('/accounts/api/profile/', profileForm)
     await auth.bootstrap()
     editMode.value = false
-    alert('Profile updated successfully!')
+    showToast.success('Profile updated successfully!')
   } catch (e: any) {
-    alert(e.response?.data?.detail || 'Failed to update profile')
+    showToast.error(e.response?.data?.detail || 'Failed to update profile')
+  }
+}
+
+async function changePassword() {
+  if (passwordForm.new_password !== passwordForm.new_password2) {
+    showToast.error('Passwords do not match')
+    return
+  }
+  
+  changingPassword.value = true
+  try {
+    await api.post('/accounts/api/change-password/', passwordForm)
+    Object.assign(passwordForm, { old_password: '', new_password: '', new_password2: '' })
+    showToast.success('Password changed successfully!')
+  } catch (e: any) {
+    const errorMsg = e.response?.data?.error || 
+                     e.response?.data?.old_password?.[0] ||
+                     e.response?.data?.new_password2?.[0] ||
+                     e.response?.data?.detail || 
+                     'Failed to change password'
+    showToast.error(errorMsg)
+  } finally {
+    changingPassword.value = false
   }
 }
 

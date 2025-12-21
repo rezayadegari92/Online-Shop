@@ -103,6 +103,7 @@ import api from '../utils/http'
 import { useCartStore } from '../stores/cart.store'
 import { useAuthStore } from '../stores/auth.store'
 import { getProductImageUrl } from '../utils/image'
+import { showToast } from '../utils/toast'
 
 const loading = ref(true)
 const products = ref<any[]>([])
@@ -245,12 +246,13 @@ function changePageSize() {
 async function addToCart(id: number) {
   try {
     await cart.add(id, 1)
+    showToast.success('Item added to cart!')
   } catch (e: any) {
     if (e.response?.status === 401) {
-      alert('Please log in to add items to cart')
+      showToast.warning('Please log in to add items to cart')
       router.push('/login')
     } else {
-      alert(e.response?.data?.detail || 'Failed to add to cart')
+      showToast.error(e.response?.data?.detail || 'Failed to add to cart')
     }
   }
 }

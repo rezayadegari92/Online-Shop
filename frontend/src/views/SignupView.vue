@@ -89,6 +89,22 @@
               </div>
             </div>
 
+            <!-- Confirm Password -->
+            <div class="space-y-2">
+              <label class="text-sm font-semibold text-gray-700 flex items-center space-x-2">
+                <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Confirm Password</span>
+                <span class="text-red-500">*</span>
+              </label>
+              <div class="relative group">
+                <input class="auth-input peer" v-model="form.password2" type="password" placeholder="••••••••" required />
+                <div class="input-border"></div>
+                <p v-if="form.password2 && form.password !== form.password2" class="text-red-500 text-xs mt-1">Passwords do not match</p>
+              </div>
+            </div>
+
             <!-- First Name -->
             <div class="space-y-2">
               <label class="text-sm font-semibold text-gray-700">First Name</label>
@@ -203,20 +219,28 @@
 import { reactive, ref } from 'vue'
 import api from '../utils/http'
 import { useRouter } from 'vue-router'
+import { showToast } from '../utils/toast'
 
 const router = useRouter()
 const loading = ref(false)
 const form = reactive({
-  email: '', username: '', password: '', first_name: '', last_name: '', birth_date: '',
+  email: '', username: '', password: '', password2: '', first_name: '', last_name: '', birth_date: '',
   address: { street: '', city: '', state: '', postal_code: '', phone_number: '', country: 'Iran' }
 })
 
 async function submit() {
+  // Validate password confirmation
+  if (form.password !== form.password2) {
+    showToast.error('Passwords do not match')
+    return
+  }
+  
   loading.value = true
   try {
     const payload: any = {
       email: form.email,
       password: form.password,
+      password2: form.password2,
       birth_date: form.birth_date
     }
     
@@ -244,7 +268,7 @@ async function submit() {
                      e.response?.data?.email?.[0] ||
                      e.response?.data?.detail || 
                      'Signup failed. Please try again.'
-    alert(errorMsg)
+    showToast.error(errorMsg)
   } finally {
     loading.value = false
   }

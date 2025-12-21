@@ -53,6 +53,7 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useWishlistStore } from '../../stores/wishlist.store'
 import { useAuthStore } from '../../stores/auth.store'
+import { showToast } from '../../utils/toast'
 
 interface Props {
   productId: number
@@ -116,7 +117,7 @@ const spinnerClass = computed(() => {
 async function handleToggle() {
   // Check if user is authenticated
   if (!authStore.isAuthenticated) {
-    alert('Please log in to add items to your wishlist')
+    showToast.warning('Please log in to add items to your wishlist')
     router.push('/login')
     return
   }
@@ -134,13 +135,14 @@ async function handleToggle() {
           showPulse.value = false
         }, 600)
       }
+      showToast.success(result.message || 'Wishlist updated!')
     } else {
       console.error('Failed to toggle wishlist:', result.error)
-      alert(result.error || 'Failed to update wishlist')
+      showToast.error(result.error || 'Failed to update wishlist')
     }
   } catch (error) {
     console.error('Error toggling wishlist:', error)
-    alert('Failed to update wishlist. Please try again.')
+    showToast.error('Failed to update wishlist. Please try again.')
   } finally {
     loading.value = false
   }
