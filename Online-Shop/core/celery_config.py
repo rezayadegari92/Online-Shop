@@ -8,11 +8,8 @@ from celery.schedules import crontab
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 
 # Initialize Django
-try:
-    django.setup()
-except RuntimeError:
-    # Django is already set up, ignore
-    pass
+# Note: django.setup() will be called automatically by Celery
+# when it loads the Django settings, so we don't need to call it here
 
 celery_app = Celery("core")
 

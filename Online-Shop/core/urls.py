@@ -30,14 +30,14 @@ urlpatterns = [
     # Admin
     path("admin/", admin.site.urls),
     # Authentication URLs
-    path("accounts/", include("accounts.urls")),
-    path("accounts/api/", include("accounts.api.urls")),
+    path("accounts/", include("apps.accounts.urls")),
+    path("accounts/api/", include("apps.accounts.api.urls")),
     # API URLs
-    path("api/", include("products.api.urls")),
-    path("api/cart/", include("carts.api.urls")),
-    path("api/orders/", include("orders.api.urls")),
-    path("api/addresses/", include("addresses.api.urls")),
-    path("api/wishlist/", include("wishlists.api.urls")),
+    path("api/", include("apps.products.api.urls")),
+    path("api/cart/", include("apps.carts.api.urls")),
+    path("api/orders/", include("apps.orders.api.urls")),
+    path("api/addresses/", include("apps.addresses.api.urls")),
+    path("api/wishlist/", include("apps.wishlists.api.urls")),
     path("api-auth/", include("rest_framework.urls")),
     # JWT Authentication
     path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
@@ -54,6 +54,8 @@ urlpatterns = [
         SpectacularRedocView.as_view(url_name="schema"),
         name="redoc",
     ),
+    # Prometheus metrics
+    path("", include("django_prometheus.urls")),
 ]
 
 if settings.DEBUG:

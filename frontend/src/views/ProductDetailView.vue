@@ -367,7 +367,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '../utils/http'
 import { useCartStore } from '../stores/cart.store'
@@ -522,7 +522,17 @@ async function handleToggleWishlist() {
   }
 }
 
+// Watch for route changes (e.g., navigating from one product to another)
+watch(() => route.params.id, () => {
+  // Scroll to top when product ID changes
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+  load()
+})
+
 onMounted(() => {
+  // Scroll to top when component mounts
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+  
   load()
   // Load wishlist if user is authenticated
   if (authStore.isAuthenticated) {

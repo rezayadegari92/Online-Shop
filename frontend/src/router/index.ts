@@ -55,6 +55,14 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+  scrollBehavior(to, from, savedPosition) {
+    // If there's a saved position (e.g., browser back button), use it
+    if (savedPosition) {
+      return savedPosition;
+    }
+    // Always scroll to top when navigating to a new route
+    return { top: 0, behavior: 'smooth' };
+  },
 });
 
 router.beforeEach(async (to) => {

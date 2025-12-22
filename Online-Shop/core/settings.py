@@ -14,6 +14,7 @@ DEBUG = os.getenv("DEBUG", "1") in ("1", "True", "true", "yes")
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*").split(",")
 
 INSTALLED_APPS = [
+    "django_prometheus",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -21,13 +22,13 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     # local apps
-    "accounts.apps.AccountsConfig",
-    "products",
-    "orders",
-    "addresses",
-    "core",
-    "carts",
-    "wishlists.apps.WishlistsConfig",
+    "apps.accounts.apps.AccountsConfig",
+    "apps.products.apps.ProductsConfig",
+    "apps.orders.apps.OrdersConfig",
+    "apps.addresses.apps.AddressesConfig",
+    "core.apps.CoreConfig",
+    "apps.carts.apps.CartsConfig",
+    "apps.wishlists.apps.WishlistsConfig",
     "drf_spectacular",
     # third-party
     "rest_framework",
@@ -36,6 +37,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "django_prometheus.middleware.PrometheusBeforeMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -43,7 +45,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "carts.middleware.CartMiddleware",
+    "apps.carts.middleware.CartMiddleware",
+    "django_prometheus.middleware.PrometheusAfterMiddleware",
 ]
 
 ROOT_URLCONF = "core.urls"

@@ -26,8 +26,8 @@ def warm_product_list_cache():
     Returns:
         int: Number of cache entries created
     """
-    from products.api.serializers import ProductSerializer
-    from products.models import Product
+    from apps.products.api.serializers import ProductSerializer
+    from apps.products.models import Product
 
     warmed_count = 0
 
@@ -85,8 +85,8 @@ def warm_top_products_cache():
     Returns:
         int: Number of cache entries created
     """
-    from products.api.serializers import ProductSerializer
-    from products.models import Product
+    from apps.products.api.serializers import ProductSerializer
+    from apps.products.models import Product
 
     warmed_count = 0
 
@@ -137,8 +137,8 @@ def warm_category_cache():
     Returns:
         int: Number of cache entries created
     """
-    from products.api.serializers import CategorySerializer, ProductSerializer
-    from products.models import Category, Product
+    from apps.products.api.serializers import CategorySerializer, ProductSerializer
+    from apps.products.models import Category, Product
 
     warmed_count = 0
 
@@ -189,9 +189,9 @@ def warm_brand_cache():
     Returns:
         int: Number of cache entries created
     """
-    from products.api.schemas import BrandSerializer as BrandSchemaSerializer
-    from products.api.serializers import ProductSerializer
-    from products.models import Brand, Product
+    from apps.products.api.schemas import BrandSerializer as BrandSchemaSerializer
+    from apps.products.api.serializers import ProductSerializer
+    from apps.products.models import Brand, Product
 
     warmed_count = 0
 
@@ -245,8 +245,8 @@ def warm_popular_products_cache(product_ids: Optional[List[int]] = None):
     Returns:
         int: Number of cache entries created
     """
-    from products.api.serializers import ProductSerializer
-    from products.models import Product
+    from apps.products.api.serializers import ProductSerializer
+    from apps.products.models import Product
 
     warmed_count = 0
 
