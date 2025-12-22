@@ -74,35 +74,40 @@
               </div>
             </div>
 
-            <!-- Password -->
-            <div class="space-y-2">
-              <label class="text-sm font-semibold text-gray-700 flex items-center space-x-2">
-                <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-                <span>Password</span>
-                <span class="text-red-500">*</span>
-              </label>
-              <div class="relative group">
-                <input class="auth-input peer" v-model="form.password" type="password" placeholder="••••••••" required />
-                <div class="input-border"></div>
-              </div>
-            </div>
+            <!-- Password Fields Grouped Together -->
+            <div class="space-y-2 md:col-span-2">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Password -->
+                <div class="space-y-2">
+                  <label class="text-sm font-semibold text-gray-700 flex items-center space-x-2">
+                    <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    <span>Password</span>
+                    <span class="text-red-500">*</span>
+                  </label>
+                  <div class="relative group">
+                    <input class="auth-input peer" v-model="form.password" type="password" placeholder="••••••••" required />
+                    <div class="input-border"></div>
+                  </div>
+                </div>
 
-            <!-- Confirm Password -->
-            <div class="space-y-2">
-              <label class="text-sm font-semibold text-gray-700 flex items-center space-x-2">
-                <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>Confirm Password</span>
-                <span class="text-red-500">*</span>
-              </label>
-              <div class="relative group">
-                <input class="auth-input peer" v-model="form.password2" type="password" placeholder="••••••••" required />
-                <div class="input-border"></div>
-                <p v-if="form.password2 && form.password !== form.password2" class="text-red-500 text-xs mt-1">Passwords do not match</p>
+                <!-- Confirm Password -->
+                <div class="space-y-2">
+                  <label class="text-sm font-semibold text-gray-700 flex items-center space-x-2">
+                    <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Confirm Password</span>
+                    <span class="text-red-500">*</span>
+                  </label>
+                  <div class="relative group">
+                    <input class="auth-input peer" v-model="form.password2" type="password" placeholder="••••••••" required />
+                    <div class="input-border"></div>
+                  </div>
+                </div>
               </div>
+              <p v-if="form.password2 && form.password !== form.password2" class="text-red-500 text-xs mt-1">Passwords do not match</p>
             </div>
 
             <!-- First Name -->
@@ -124,7 +129,7 @@
             </div>
 
             <!-- Birth Date -->
-            <div class="space-y-2">
+            <div class="space-y-2 md:col-span-2">
               <label class="text-sm font-semibold text-gray-700 flex items-center space-x-2">
                 <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -132,10 +137,7 @@
                 <span>Birth Date</span>
                 <span class="text-red-500">*</span>
               </label>
-              <div class="relative group">
-                <input class="auth-input peer" v-model="form.birth_date" type="date" required />
-                <div class="input-border"></div>
-              </div>
+              <DatePicker v-model="form.birth_date" placeholder="mm/dd/yyyy" />
             </div>
           </div>
 
@@ -220,6 +222,7 @@ import { reactive, ref } from 'vue'
 import api from '../utils/http'
 import { useRouter } from 'vue-router'
 import { showToast } from '../utils/toast'
+import DatePicker from '../components/DatePicker.vue'
 
 const router = useRouter()
 const loading = ref(false)

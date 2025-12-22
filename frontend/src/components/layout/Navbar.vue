@@ -1,9 +1,23 @@
 <template>
   <nav class="sticky top-0 z-30 border-b border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-gray-900/80 shadow-sm dark:shadow-gray-800">
     <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-      <router-link to="/" class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-        OnlineShop
-      </router-link>
+      <div class="flex items-center gap-3">
+        <router-link to="/" class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          OnlineShop
+        </router-link>
+        <router-link 
+          to="/project-info" 
+          class="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300 group"
+          title="Project Information"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span class="text-xs font-semibold text-red-500 dark:text-red-400 group-hover:text-red-600 dark:group-hover:text-red-300">
+            (for backend developers)
+          </span>
+        </router-link>
+      </div>
       <div class="flex items-center gap-6">
         <router-link to="/" class="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition font-medium">Home</router-link>
         <router-link to="/products" class="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition font-medium">Products</router-link>

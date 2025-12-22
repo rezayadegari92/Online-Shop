@@ -46,6 +46,10 @@ const routes = [
     component: () => import("../views/OrdersView.vue"),
     meta: { requiresAuth: true },
   },
+  {
+    path: "/project-info",
+    component: () => import("../views/ProjectInfoView.vue"),
+  },
 ];
 
 const router = createRouter({
