@@ -130,7 +130,7 @@ services:
     container_name: onlineshop_postgres_exporter
     image: prometheuscommunity/postgres-exporter:latest
     environment:
-      DATA_SOURCE_NAME: "postgresql://onlineshop:onlineshop@db:5432/onlineshop?sslmode=disable"
+      DATA_SOURCE_NAME: "postgresql://onlineshop:onlineshop@db/onlineshop?sslmode=disable"
     depends_on:
       db:
         condition: service_healthy
