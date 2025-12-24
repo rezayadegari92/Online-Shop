@@ -198,8 +198,21 @@ CELERY_BROKER_CONNECTION_MAX_RETRIES = 10
 
 # 🗄️ Redis Cache Configuration
 # REDIS_URL format: redis://:password@host:port/db or redis://username:password@host:port/db
-# If REDIS_URL is not set, fallback to dummy cache (no caching)
+# Alternatively, build from components: REDIS_HOST, REDIS_PORT, REDIS_PASSWORD, REDIS_DB
 redis_url = os.getenv("REDIS_URL")
+if not redis_url:
+    # Build Redis URL from components if REDIS_URL is not provided
+    redis_host = os.getenv("REDIS_HOST")
+    redis_port = os.getenv("REDIS_PORT", "6379")
+    redis_password = os.getenv("REDIS_PASSWORD")
+    redis_db = os.getenv("REDIS_DB", "1")
+    
+    if redis_host:
+        if redis_password:
+            redis_url = f"redis://:{redis_password}@{redis_host}:{redis_port}/{redis_db}"
+        else:
+            redis_url = f"redis://{redis_host}:{redis_port}/{redis_db}"
+
 if redis_url:
     CACHES = {
         "default": {
