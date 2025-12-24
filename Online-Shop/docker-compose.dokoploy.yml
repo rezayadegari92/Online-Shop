@@ -1,33 +1,4 @@
 services:
-  db:
-    container_name: onlineshop_db
-    image: postgres:15-alpine
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-onlineshop}
-      POSTGRES_USER: ${POSTGRES_USER:-onlineshop}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-onlineshop}
-      PGDATA: /var/lib/postgresql/data/pgdata
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-onlineshop} -d ${POSTGRES_DB:-onlineshop}"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
-    restart: unless-stopped
-
-  redis:
-    container_name: onlineshop_redis
-    image: redis:7-alpine
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
-    restart: unless-stopped
-
   web:
     container_name: onlineshop_web
     build: .
@@ -38,16 +9,16 @@ services:
       - .:/app
       - media_volume:/app/media
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-onlineshop}
-      POSTGRES_USER: ${POSTGRES_USER:-onlineshop}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-onlineshop}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_HOST: db
       DJANGO_SETTINGS_MODULE: core.settings
       PYTHONPATH: /app
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
-      DEBUG: ${DEBUG:-1}
-      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-*}
+      DEBUG: ${DEBUG}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
     depends_on:
       db:
         condition: service_healthy
@@ -63,9 +34,9 @@ services:
     volumes:
       - .:/app
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-onlineshop}
-      POSTGRES_USER: ${POSTGRES_USER:-onlineshop}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-onlineshop}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_HOST: db
       DJANGO_SETTINGS_MODULE: core.settings
       PYTHONPATH: /app
@@ -86,9 +57,9 @@ services:
     volumes:
       - .:/app
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-onlineshop}
-      POSTGRES_USER: ${POSTGRES_USER:-onlineshop}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-onlineshop}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_HOST: db
       DJANGO_SETTINGS_MODULE: core.settings
       PYTHONPATH: /app
@@ -105,7 +76,7 @@ services:
     container_name: onlineshop_frontend
     build: ../frontend
     environment:
-      VITE_BACKEND_URL: ${VITE_BACKEND_URL:-http://web:8000}
+      VITE_BACKEND_URL: ${VITE_BACKEND_URL}
     depends_on:
       - web
     restart: unless-stopped
@@ -133,8 +104,8 @@ services:
     container_name: onlineshop_grafana
     image: grafana/grafana:latest
     environment:
-      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
       - GF_USERS_ALLOW_SIGN_UP=false
     volumes:
       - grafana_data:/var/lib/grafana
@@ -156,7 +127,7 @@ services:
     container_name: onlineshop_redis_exporter
     image: oliver006/redis_exporter:latest
     environment:
-      REDIS_ADDR: "redis:6379"
+      REDIS_ADDR: ${REDIS_ADDR}
     depends_on:
       redis:
         condition: service_healthy
