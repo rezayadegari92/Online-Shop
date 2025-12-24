@@ -1,22 +1,3 @@
-x-common-env: &common-env
-  POSTGRES_DB: ${POSTGRES_DB:-onlineshop}
-  POSTGRES_USER: ${POSTGRES_USER:-onlineshop}
-  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-onlineshop}
-  POSTGRES_HOST: db
-
-x-django-env: &django-env
-  <<: *common-env
-  DJANGO_SETTINGS_MODULE: core.settings
-  PYTHONPATH: /app
-  CELERY_BROKER_URL: redis://redis:6379/0
-  CELERY_RESULT_BACKEND: redis://redis:6379/0
-
-x-healthcheck: &healthcheck
-  interval: 10s
-  timeout: 5s
-  retries: 10
-  start_period: 30s
-
 services:
   db:
     container_name: onlineshop_db
@@ -30,7 +11,10 @@ services:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-onlineshop} -d ${POSTGRES_DB:-onlineshop}"]
-      <<: *healthcheck
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     restart: unless-stopped
 
   redis:
@@ -38,7 +22,10 @@ services:
     image: redis:7-alpine
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      <<: *healthcheck
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     restart: unless-stopped
 
   web:
@@ -51,7 +38,14 @@ services:
       - .:/app
       - media_volume:/app/media
     environment:
-      <<: *django-env
+      POSTGRES_DB: ${POSTGRES_DB:-onlineshop}
+      POSTGRES_USER: ${POSTGRES_USER:-onlineshop}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-onlineshop}
+      POSTGRES_HOST: db
+      DJANGO_SETTINGS_MODULE: core.settings
+      PYTHONPATH: /app
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
       DEBUG: ${DEBUG:-1}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS:-*}
     depends_on:
@@ -69,7 +63,14 @@ services:
     volumes:
       - .:/app
     environment:
-      <<: *django-env
+      POSTGRES_DB: ${POSTGRES_DB:-onlineshop}
+      POSTGRES_USER: ${POSTGRES_USER:-onlineshop}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-onlineshop}
+      POSTGRES_HOST: db
+      DJANGO_SETTINGS_MODULE: core.settings
+      PYTHONPATH: /app
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
     depends_on:
       redis:
         condition: service_healthy
@@ -85,7 +86,14 @@ services:
     volumes:
       - .:/app
     environment:
-      <<: *django-env
+      POSTGRES_DB: ${POSTGRES_DB:-onlineshop}
+      POSTGRES_USER: ${POSTGRES_USER:-onlineshop}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-onlineshop}
+      POSTGRES_HOST: db
+      DJANGO_SETTINGS_MODULE: core.settings
+      PYTHONPATH: /app
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
     depends_on:
       redis:
         condition: service_healthy
@@ -139,11 +147,9 @@ services:
   postgres-exporter:
     container_name: onlineshop_postgres_exporter
     image: prometheuscommunity/postgres-exporter:latest
-    environment:
-      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER:-onlineshop}:${POSTGRES_PASSWORD:-onlineshop}@db/${POSTGRES_DB:-onlineshop}?sslmode=disable"
-    depends_on:
-      db:
-        condition: service_healthy
+    env_file:
+      - .env
+      - .env.example
     restart: unless-stopped
 
   redis-exporter:
