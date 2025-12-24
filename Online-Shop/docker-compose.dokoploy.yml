@@ -30,6 +30,7 @@ services:
     container_name: onlineshop_celery
     image: onlineshop:latest
     working_dir: /app
+    user: "1000:1000"
     command: celery -A core.celery_config worker --loglevel=info
     volumes:
       - .:/app
@@ -47,12 +48,15 @@ services:
       REDIS_PORT: ${REDIS_PORT}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       REDIS_DB: ${REDIS_DB}
+    depends_on:
+      - redis
     restart: unless-stopped
 
   celery-beat:
     container_name: onlineshop_celery_beat
     image: onlineshop:latest
     working_dir: /app
+    user: "1000:1000"
     command: celery -A core.celery_config beat --loglevel=info
     volumes:
       - .:/app
@@ -70,6 +74,8 @@ services:
       REDIS_PORT: ${REDIS_PORT}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       REDIS_DB: ${REDIS_DB}
+    depends_on:
+      - redis
     restart: unless-stopped
 
   frontend:
@@ -125,7 +131,22 @@ services:
     container_name: onlineshop_redis_exporter
     image: oliver006/redis_exporter:latest
     environment:
-      REDIS_ADDR: ${REDIS_ADDR}
+      REDIS_ADDR: ${REDIS_ADDR:-redis:6379}
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  redis:
+    container_name: onlineshop_redis
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
     restart: unless-stopped
 
 volumes:
@@ -133,3 +154,4 @@ volumes:
   postgres_data:
   prometheus_data:
   grafana_data:
+  redis_data:
