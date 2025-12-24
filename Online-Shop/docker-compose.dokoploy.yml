@@ -17,6 +17,7 @@ services:
       PYTHONPATH: /app
       CELERY_BROKER_URL: ${CELERY_BROKER_URL}
       CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
+      REDIS_URL: ${REDIS_URL}
       DEBUG: ${DEBUG}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS}
     restart: unless-stopped
@@ -37,6 +38,7 @@ services:
       PYTHONPATH: /app
       CELERY_BROKER_URL: ${CELERY_BROKER_URL}
       CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
+      REDIS_URL: ${REDIS_URL}
     restart: unless-stopped
 
   celery-beat:
@@ -55,6 +57,7 @@ services:
       PYTHONPATH: /app
       CELERY_BROKER_URL: ${CELERY_BROKER_URL}
       CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
+      REDIS_URL: ${REDIS_URL}
     restart: unless-stopped
 
   frontend:
