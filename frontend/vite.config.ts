@@ -4,28 +4,28 @@ import vue from "@vitejs/plugin-vue";
 export default defineConfig({
   plugins: [vue()],
   server: {
-    port: 3000,
+    port: 3030,
     host: "0.0.0.0",
     proxy: {
       "/api": {
-        target: process.env.VITE_BACKEND_URL || "http://localhost:8000",
+        target: process.env.VITE_BACKEND_URL || "http://localhost:8033",
         changeOrigin: true,
         secure: false,
       },
       "/accounts": {
-        target: process.env.VITE_BACKEND_URL || "http://localhost:8000",
+        target: process.env.VITE_BACKEND_URL || "http://localhost:8033",
         changeOrigin: true,
         secure: false,
       },
       "/media": {
-        target: process.env.VITE_BACKEND_URL || "http://localhost:8000",
+        target: process.env.VITE_BACKEND_URL || "http://localhost:8033",
         changeOrigin: true,
         secure: false,
       },
     },
   },
   preview: {
-    port: 3000,
+    port: 3030,
     host: "0.0.0.0",
     allowedHosts: true,
     proxy: {

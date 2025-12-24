@@ -181,9 +181,9 @@ docker-compose exec web python manage.py createsuperuser
 ```
 
 **Access the application:**
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:8000
-- Admin Panel: http://localhost:8000/admin
+- Frontend: http://localhost:3030
+- Backend API: http://localhost:8033
+- Admin Panel: http://localhost:8033/admin
 
 ### **Option 2: Local Development**
 
