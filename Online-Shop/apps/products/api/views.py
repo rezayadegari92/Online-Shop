@@ -259,23 +259,59 @@ class TopRatedProductsView(APIView):
         query_params=["page", "page_size"],
     )
     def get(self, request):
-        # Annotate products with rating statistics
-        # Use select_related after annotate to minimize GROUP BY issues
-        # PostgreSQL requires proper grouping when using aggregations with joins
-        products = (
+        # Two-step approach to avoid PostgreSQL GROUP BY issues:
+        # PostgreSQL requires all non-aggregated columns in GROUP BY when using
+        # aggregations with joins (from select_related)
+        # Solution: Get IDs and ratings first with values(), then fetch full objects
+        
+        # Step 1: Get product IDs with ratings (values() handles grouping correctly)
+        rated_products = (
             Product.objects
             .annotate(
-                rating_count=Count("ratings", distinct=True),
+                rating_count=Count("ratings"),
                 avg_rating=Avg("ratings__value")
             )
             .filter(rating_count__gt=0)
-            .select_related("brand", "category")
-            .prefetch_related("images")
             .order_by("-avg_rating", "id")
+            .values("id", "rating_count", "avg_rating")
         )
+        
+        # Get data in correct order
+        rated_data = list(rated_products)
+        product_ids = [item["id"] for item in rated_data]
+        rating_map = {item["id"]: (item["avg_rating"], item["rating_count"]) for item in rated_data}
+        
+        if not product_ids:
+            products = Product.objects.none()
+        else:
+            # Step 2: Fetch full Product objects with related data
+            # Use Case/When to preserve the ordering from step 1
+            from django.db.models import Case, When, IntegerField
+            
+            preserved_order = Case(
+                *[When(id=pid, then=pos) for pos, pid in enumerate(product_ids)],
+                output_field=IntegerField()
+            )
+            
+            # Fetch products WITHOUT re-annotating to avoid GROUP BY issues
+            products = (
+                Product.objects
+                .filter(id__in=product_ids)
+                .select_related("brand", "category")
+                .prefetch_related("images")
+                .annotate(_order=preserved_order)
+                .order_by("_order")
+            )
 
         paginator = CustomPageNumberPagination()
         paginated_products = paginator.paginate_queryset(products, request)
+        
+        # Attach rating data to paginated products (after pagination to avoid evaluating full queryset)
+        if paginated_products and rating_map:
+            for product in paginated_products:
+                if product.id in rating_map:
+                    product.avg_rating = rating_map[product.id][0]
+                    product.rating_count = rating_map[product.id][1]
         serializer = ProductSerializer(
             paginated_products, many=True, context={"request": request}
         )
