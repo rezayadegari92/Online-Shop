@@ -20,8 +20,16 @@ class Category(models.Model):
     )
 
     def __str__(self):
-        if self.parent:
-            return f"{self.parent} → {self.name}"
+        # Check parent_id first to avoid triggering a query if not needed
+        if hasattr(self, 'parent_id') and self.parent_id:
+            try:
+                # Try to access parent, but handle exceptions gracefully
+                parent = self.parent
+                if parent:
+                    return f"{parent.name} → {self.name}"
+            except (Category.DoesNotExist, Category.MultipleObjectsReturned, AttributeError):
+                # If parent doesn't exist or there's a data integrity issue, just return name
+                return self.name
         return self.name
 
 

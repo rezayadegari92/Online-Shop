@@ -259,11 +259,18 @@ class TopRatedProductsView(APIView):
         query_params=["page", "page_size"],
     )
     def get(self, request):
+        # Annotate products with rating statistics
+        # Use select_related after annotate to minimize GROUP BY issues
+        # PostgreSQL requires proper grouping when using aggregations with joins
         products = (
-            Product.objects.select_related("brand", "category")
-            .prefetch_related("images")
-            .annotate(rating_count=Count("ratings"), avg_rating=Avg("ratings__value"))
+            Product.objects
+            .annotate(
+                rating_count=Count("ratings", distinct=True),
+                avg_rating=Avg("ratings__value")
+            )
             .filter(rating_count__gt=0)
+            .select_related("brand", "category")
+            .prefetch_related("images")
             .order_by("-avg_rating", "id")
         )
 
