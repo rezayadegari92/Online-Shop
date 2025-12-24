@@ -12,18 +12,13 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_HOST: db
+      POSTGRES_HOST: ${POSTGRES_HOST}
       DJANGO_SETTINGS_MODULE: core.settings
       PYTHONPATH: /app
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
       DEBUG: ${DEBUG}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS}
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     restart: unless-stopped
 
   celery:
@@ -37,16 +32,11 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_HOST: db
+      POSTGRES_HOST: ${POSTGRES_HOST}
       DJANGO_SETTINGS_MODULE: core.settings
       PYTHONPATH: /app
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/0
-    depends_on:
-      redis:
-        condition: service_healthy
-      web:
-        condition: service_started
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
     restart: unless-stopped
 
   celery-beat:
@@ -60,16 +50,11 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_HOST: db
+      POSTGRES_HOST: ${POSTGRES_HOST}
       DJANGO_SETTINGS_MODULE: core.settings
       PYTHONPATH: /app
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/0
-    depends_on:
-      redis:
-        condition: service_healthy
-      web:
-        condition: service_started
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
     restart: unless-stopped
 
   frontend:
@@ -96,8 +81,6 @@ services:
       - '--web.enable-lifecycle'
     depends_on:
       - web
-      - db
-      - redis
     restart: unless-stopped
 
   grafana:
@@ -128,9 +111,6 @@ services:
     image: oliver006/redis_exporter:latest
     environment:
       REDIS_ADDR: ${REDIS_ADDR}
-    depends_on:
-      redis:
-        condition: service_healthy
     restart: unless-stopped
 
 volumes:
