@@ -1,0 +1,153 @@
+x-common-env: &common-env
+  POSTGRES_DB: onlineshop
+  POSTGRES_USER: onlineshop
+  POSTGRES_PASSWORD: onlineshop
+  POSTGRES_HOST: db
+  POSTGRES_PORT: 5432
+
+x-django-env: &django-env
+  <<: *common-env
+  DJANGO_SETTINGS_MODULE: core.settings
+  PYTHONPATH: /app
+  CELERY_BROKER_URL: redis://redis:6379/0
+  CELERY_RESULT_BACKEND: redis://redis:6379/0
+
+x-healthcheck: &healthcheck
+  interval: 5s
+  timeout: 3s
+  retries: 5
+
+services:
+  db:
+    container_name: onlineshop_db
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: onlineshop
+      POSTGRES_USER: onlineshop
+      POSTGRES_PASSWORD: onlineshop
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U onlineshop"]
+      <<: *healthcheck
+
+  redis:
+    container_name: onlineshop_redis
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      <<: *healthcheck
+
+  web:
+    container_name: onlineshop_web
+    build: .
+    image: onlineshop:latest
+    working_dir: /app
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+      - media_volume:/app/media
+    environment:
+      <<: *django-env
+      DEBUG: "1"
+      ALLOWED_HOSTS: "*"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  celery:
+    container_name: onlineshop_celery
+    image: onlineshop:latest
+    working_dir: /app
+    command: celery -A core.celery_config worker --loglevel=info
+    volumes:
+      - .:/app
+    environment:
+      <<: *django-env
+    depends_on:
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_started
+
+  celery-beat:
+    container_name: onlineshop_celery_beat
+    image: onlineshop:latest
+    working_dir: /app
+    command: celery -A core.celery_config beat --loglevel=info
+    volumes:
+      - .:/app
+    environment:
+      <<: *django-env
+    depends_on:
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_started
+
+  frontend:
+    container_name: onlineshop_frontend
+    build: ../frontend
+    environment:
+      VITE_BACKEND_URL: http://web:8000
+    depends_on:
+      - web
+
+  prometheus:
+    container_name: onlineshop_prometheus
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    depends_on:
+      - web
+      - db
+      - redis
+
+  grafana:
+    container_name: onlineshop_grafana
+    image: grafana/grafana:latest
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - prometheus
+
+  postgres-exporter:
+    container_name: onlineshop_postgres_exporter
+    image: prometheuscommunity/postgres-exporter:latest
+    environment:
+      DATA_SOURCE_NAME: "postgresql://onlineshop:onlineshop@db:5432/onlineshop?sslmode=disable"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  redis-exporter:
+    container_name: onlineshop_redis_exporter
+    image: oliver006/redis_exporter:latest
+    environment:
+      REDIS_ADDR: "redis:6379"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+volumes:
+  media_volume:
+  postgres_data:
+  prometheus_data:
+  grafana_data:
+
