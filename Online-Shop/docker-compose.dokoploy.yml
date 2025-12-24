@@ -3,7 +3,6 @@ x-common-env: &common-env
   POSTGRES_USER: onlineshop
   POSTGRES_PASSWORD: onlineshop
   POSTGRES_HOST: db
-  POSTGRES_PORT: 5432
 
 x-django-env: &django-env
   <<: *common-env
