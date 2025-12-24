@@ -48,3 +48,5 @@ scrape_configs:
           service: 'redis'
           cache: 'onlineshop'
 
+
+

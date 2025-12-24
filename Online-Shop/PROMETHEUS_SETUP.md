@@ -233,3 +233,5 @@ product_views_total.labels(
 
 **Your Django Online Shop now has professional monitoring! 🎉**
 
+
+

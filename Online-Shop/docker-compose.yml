@@ -105,7 +105,7 @@ services:
     container_name: onlineshop_frontend
     build: ../frontend
     ports:
-      - "3030:3000"
+      - "3030:3030"
     environment:
       VITE_BACKEND_URL: http://web:8000
     depends_on:
@@ -139,7 +139,7 @@ services:
     container_name: onlineshop_grafana
     image: grafana/grafana:latest
     ports:
-      - "3000:3000"
+      - "3040:3040"
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
