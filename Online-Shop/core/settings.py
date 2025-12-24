@@ -206,10 +206,12 @@ if not redis_url:
     redis_port = os.getenv("REDIS_PORT", "6379")
     redis_password = os.getenv("REDIS_PASSWORD")
     redis_db = os.getenv("REDIS_DB", "1")
+    redis_user = os.getenv("REDIS_USER", "default")  # Default username for Redis 6+
     
     if redis_host:
         if redis_password:
-            redis_url = f"redis://:{redis_password}@{redis_host}:{redis_port}/{redis_db}"
+            # Include username in the URL format: redis://username:password@host:port/db
+            redis_url = f"redis://{redis_user}:{redis_password}@{redis_host}:{redis_port}/{redis_db}"
         else:
             redis_url = f"redis://{redis_host}:{redis_port}/{redis_db}"
 
